@@ -1,0 +1,181 @@
+/* ============================================================
+   Classroom RPG — v2 palette (AGENTS.md section 5, flat, no glow)
+   Plain readable B0 styling. Art pass (sprites, pixel font) is B1.
+   ============================================================ */
+
+:root {
+  /* palette: warm and earthy, no indigo/purple/navy */
+  --bg: #1b1713;          /* charcoal-brown dark */
+  --bg2: #241f19;
+  --panel: #2a241d;       /* menu window fill (flat dark-brown) */
+  --panel-line: #4a4134;  /* menu window border */
+  --bone: #e8dcc3;        /* parchment/bone text */
+  --bone-dim: #b7a98d;
+  --ember: #ff8b2a;       /* ember orange accent */
+  --gold: #d9a441;        /* brass gold accent */
+  --moss: #6a994e;        /* moss green (good/heal) */
+  --teal: #2f9e94;        /* teal (magic/focus) */
+  --brick: #b23a48;       /* brick red (damage/bad) */
+  --bone-frame: #e8dcc3;  /* menu window frame */
+  font-size: 16px;
+}
+
+* { box-sizing: border-box; }
+
+html, body { margin: 0; padding: 0; height: 100%; }
+
+body {
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--bone);
+}
+
+button {
+  font-family: inherit;
+  font-size: 15px;
+  background: var(--panel);
+  color: var(--bone);
+  border: 2px solid var(--panel-line);
+  padding: 7px 12px;
+  cursor: pointer;
+}
+button:hover { border-color: var(--gold); color: var(--gold); }
+button:disabled { opacity: 0.45; cursor: not-allowed; }
+button.primary { border-color: var(--gold); color: var(--gold); font-weight: 700; }
+button.danger { border-color: var(--brick); color: #ff9aa5; }
+button.success { border-color: var(--moss); color: #a8dba3; }
+
+input, select, textarea {
+  font-family: inherit;
+  font-size: 15px;
+  background: var(--bg2);
+  color: var(--bone);
+  border: 2px solid var(--panel-line);
+  padding: 6px 8px;
+}
+
+/* menu window: double-line frame, flat fill, bone border */
+.window {
+  background: var(--panel);
+  border: 2px solid var(--bone-frame);
+  outline: 2px solid var(--panel-line);
+  outline-offset: -4px;
+  padding: 10px 12px;
+}
+
+h1, h2, h3 { color: var(--gold); font-weight: 700; }
+.muted { color: var(--bone-dim); }
+
+.row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 6px 0; }
+.label { font-size: 13px; color: var(--bone-dim); text-transform: uppercase; letter-spacing: 1px; }
+
+/* HP / Focus bars */
+.bar { position: relative; height: 16px; background: #3a332a; border: 2px solid var(--panel-line); }
+.bar-fill { height: 100%; }
+.bar-hp .bar-fill { background: var(--moss); }
+.bar-focus .bar-fill { background: var(--teal); }
+.bar-label { position: absolute; inset: 0; font-size: 11px; text-align: center; color: #fff; line-height: 12px; }
+
+/* ============ GM console ============ */
+.gm { max-width: 900px; margin: 0 auto; padding: 14px 16px 60px; }
+.gm-hint {
+  border: 2px solid var(--gold);
+  background: #2a2218;
+  color: var(--gold);
+  padding: 8px 12px;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+.gm h2 { margin: 14px 0 6px; border-bottom: 2px solid var(--panel-line); padding-bottom: 4px; }
+.player-row { display: flex; gap: 8px; align-items: center; padding: 4px 0; flex-wrap: wrap; }
+.player-row .pname { flex: 1; min-width: 120px; font-weight: 700; }
+.gm .state-panel { display: grid; gap: 8px; margin: 8px 0; }
+.spot-chip { display: inline-block; padding: 2px 8px; margin: 2px; border: 2px solid var(--panel-line); font-size: 13px; }
+.spot-chip.acting { border-color: var(--gold); color: var(--gold); }
+.skill-btn { display: block; width: 100%; text-align: left; margin: 4px 0; }
+.assist-row { display: flex; gap: 6px; flex-wrap: wrap; }
+.party-adjust { margin-top: 10px; }
+.party-adjust .pa-row { display: flex; gap: 8px; align-items: center; padding: 2px 0; }
+
+/* ============ Stage ============ */
+.stage { min-height: 100vh; display: flex; flex-direction: column; }
+.stage-header {
+  display: flex; justify-content: space-between; align-items: center;
+  background: var(--bg2); border-bottom: 2px solid var(--panel-line);
+  padding: 10px 16px;
+}
+.app-title { color: var(--gold); font-size: 22px; font-weight: 800; letter-spacing: 1px; }
+.header-stats { display: flex; gap: 10px; }
+.badge { border: 2px solid var(--panel-line); padding: 3px 10px; font-size: 14px; color: var(--bone-dim); }
+.stage-main { flex: 1; display: flex; min-height: 0; }
+.room-pane { flex: 1; padding: 18px 24px; overflow: auto; }
+.big { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+.big-title { color: var(--gold); font-size: 40px; font-weight: 900; }
+.big-title.win { color: var(--moss); }
+.big-title.lose { color: var(--brick); }
+.big-sub { color: var(--bone-dim); font-size: 19px; margin-top: 8px; }
+.room-name { color: var(--gold); font-size: 26px; font-weight: 800; }
+.room-flavour { color: var(--bone-dim); font-size: 16px; margin: 4px 0 12px; }
+.enemy { border: 2px solid var(--brick); padding: 10px 12px; margin: 8px 0; max-width: 420px; background: #241a16; }
+.enemy .ename { color: #ff9aa5; font-size: 20px; font-weight: 800; }
+.actor-panel { margin: 10px 0; }
+.actor-name { font-size: 18px; font-weight: 700; color: var(--bone); }
+.actor-skills { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+.actor-skills span { border: 2px solid var(--panel-line); padding: 3px 8px; font-size: 14px; }
+.roll-line { font-size: 17px; margin: 8px 0; }
+.roll-line .big { font-size: 24px; }
+.roll-success { color: var(--moss); font-weight: 800; }
+.roll-fail { color: var(--brick); font-weight: 800; }
+.roll-crit { color: var(--gold); font-weight: 900; }
+.sayit { border: 2px solid var(--gold); background: #2a2218; padding: 10px 14px; margin: 8px 0; font-size: 20px; color: var(--bone); }
+.sayit .prompt { font-weight: 700; }
+.roster { display: flex; gap: 10px; padding: 10px 16px; background: var(--bg2); border-bottom: 2px solid var(--panel-line); overflow-x: auto; }
+.roster-card { min-width: 130px; border: 2px solid var(--panel-line); background: var(--panel); padding: 8px; }
+.roster-card.acting { border-color: var(--gold); }
+.roster-card.dazed { opacity: 0.4; }
+.roster-name { font-weight: 700; font-size: 15px; }
+.roster-class { font-size: 12px; color: var(--bone-dim); }
+.log { width: 300px; flex: 0 0 auto; border-left: 2px solid var(--panel-line); background: var(--bg2); padding: 10px; overflow-y: auto; }
+.log-title { color: var(--gold); font-weight: 800; margin-bottom: 6px; }
+.log-list { list-style: none; margin: 0; padding: 0; }
+.log-entry { font-size: 13px; color: var(--bone-dim); padding: 3px 0; border-bottom: 1px solid #3a332a; }
+.log-combat { color: #ffb3c1; }
+.log-room { color: var(--gold); }
+.log-language { color: var(--teal); }
+.log-narrate { color: var(--bone); font-style: italic; }
+.log-rest { color: var(--moss); }
+.log-treasure { color: var(--gold); }
+
+/* ============ single-window drawer ============ */
+.drawer-open {
+  position: fixed; right: 14px; bottom: 14px; z-index: 40;
+  width: 56px; height: 56px; border-radius: 0; font-weight: 800;
+  border: 2px solid var(--gold); color: var(--gold); background: var(--panel);
+}
+.drawer {
+  position: fixed; top: 0; right: 0; bottom: 0; width: min(720px, 94vw);
+  z-index: 30; background: var(--bg); border-left: 3px solid var(--gold);
+  transform: translateX(105%); transition: transform 0.2s ease;
+  display: flex; flex-direction: column;
+}
+.drawer.open { transform: translateX(0); }
+.drawer-head {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 14px; border-bottom: 2px solid var(--panel-line); background: var(--bg2);
+}
+.drawer-body { flex: 1; overflow-y: auto; }
+.drawer-body .gm { max-width: none; }
+
+/* ============ start overlay ============ */
+.start-overlay {
+  position: fixed; inset: 0; background: rgba(10, 8, 5, 0.88);
+  display: none; align-items: center; justify-content: center; z-index: 100;
+}
+.start-overlay.show { display: flex; }
+.start-box { text-align: center; max-width: 420px; }
+.start-box h1 { color: var(--gold); font-size: 30px; }
+
+@media (max-width: 900px) {
+  .stage-main { flex-direction: column; }
+  .log { width: auto; border-left: none; border-top: 2px solid var(--panel-line); max-height: 180px; }
+}

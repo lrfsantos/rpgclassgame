@@ -1,0 +1,63 @@
+{
+  "version": 2,
+  "playerNames": [
+    "Alex", "Sam", "Jamie", "Morgan", "Riley", "Taylor", "Jordan", "Casey",
+    "Avery", "Quinn", "Leo", "Mika", "Zara", "Noor", "Kai", "Eli"
+  ],
+  "npcNames": ["Pip the Squire", "Biscuit the Dog", "Nadia the Guide"],
+  "narrations": {
+    "expeditionStart": [
+      "The {deck} expedition begins! Onward, heroes.",
+      "A brave party steps into {deck}. Anything could happen!"
+    ],
+    "monsterAppears": [
+      "A wild {monster} blocks the way!",
+      "Something rustles... {monster} appears, looking hungry.",
+      "Suddenly, {monster} jumps out with a dramatic roar."
+    ],
+    "crit": [
+      "NATURAL 20! A moment of legend!",
+      "PERFECT! The crowd (of no one) goes wild!"
+    ],
+    "fumble": [
+      "Natural 1... your shoe falls off at the worst moment.",
+      "A perfect fumble. The monster laughs kindly."
+    ],
+    "victory": [
+      "{monster} is defeated! The party cheers!",
+      "Down goes {monster}! Excellent teamwork!"
+    ],
+    "defeat": [
+      "The party is overwhelmed. Regroup at the camp — you live to try again.",
+      "That was too much. The heroes retreat with courage and bruises."
+    ],
+    "rest": [
+      "A safe rest. Soup, songs, and Focus restored.",
+      "Rest at last. Everyone breathes out and recovers."
+    ],
+    "treasure": [
+      "Treasure! The party pockets some gold.",
+      "Sparkles everywhere! A fine find."
+    ],
+    "trapFail": [
+      "A trap! {player} springs it and takes the hit.",
+      "The floor betrays {player}. Ouch!"
+    ],
+    "event": [
+      "Something strange happens in this room...",
+      "A small wonder, a small reward."
+    ],
+    "languageGood": [
+      "Great English! {player} gains a +4 bonus.",
+      "Excellent! That was worth +4."
+    ],
+    "languageMid": [
+      "Good effort! {player} gains +2.",
+      "Not bad at all — +2 bonus."
+    ],
+    "languageWeak": [
+      "No bonus this time, but every try counts.",
+      "+0. The teacher nods and we move on."
+    ]
+  }
+}

@@ -1,0 +1,65 @@
+{
+  "version": 2,
+  "classes": [
+    {
+      "id": "warrior",
+      "name": "Warrior",
+      "stats": { "might": 5, "agility": 3, "mind": 2, "heart": 2 },
+      "maxHp": 14,
+      "maxFocus": 3,
+      "basic": { "name": "Cleave", "stat": "might", "damage": "d4", "flavour": "A wide, honest swing." },
+      "skillIds": ["power-strike", "taunt", "shield-wall"],
+      "blurb": "Front line, loud voice, bigger sword."
+    },
+    {
+      "id": "thief",
+      "name": "Thief",
+      "stats": { "might": 2, "agility": 5, "mind": 3, "heart": 2 },
+      "maxHp": 10,
+      "maxFocus": 3,
+      "basic": { "name": "Quick Stab", "stat": "agility", "damage": "d4", "flavour": "Fast and gone before you notice." },
+      "skillIds": ["backstab", "keen-eye", "pickpocket"],
+      "blurb": "Fast fingers, faster feet, occasionally honest."
+    },
+    {
+      "id": "mage",
+      "name": "Mage",
+      "stats": { "might": 2, "agility": 3, "mind": 5, "heart": 2 },
+      "maxHp": 9,
+      "maxFocus": 4,
+      "basic": { "name": "Spark", "stat": "mind", "damage": "d4", "flavour": "A little taught dart of light." },
+      "skillIds": ["fireball", "frost-bind", "mana-ward"],
+      "blurb": "Reads the ancient words out loud. Sometimes they listen."
+    },
+    {
+      "id": "cleric",
+      "name": "Cleric",
+      "stats": { "might": 3, "agility": 2, "mind": 3, "heart": 4 },
+      "maxHp": 11,
+      "maxFocus": 4,
+      "basic": { "name": "Mace Bonk", "stat": "might", "damage": "d4", "flavour": "Peace through superior percussion." },
+      "skillIds": ["healing-word", "bless", "sanctuary"],
+      "blurb": "Keeps everyone standing with kind words and heavier verbs."
+    },
+    {
+      "id": "ranger",
+      "name": "Ranger",
+      "maxHp": 10,
+      "maxFocus": 3,
+      "stats": { "might": 3, "agility": 4, "mind": 3, "heart": 2 },
+      "basic": { "name": "Snap Shot", "stat": "agility", "damage": "d4", "flavour": "Loose, fast, surprisingly accurate." },
+      "skillIds": ["aimed-shot", "trap-sense", "double-shot"],
+      "blurb": "Walks the wild paths. Never lost, mostly on purpose."
+    },
+    {
+      "id": "bard",
+      "name": "Bard",
+      "maxHp": 10,
+      "maxFocus": 4,
+      "stats": { "might": 2, "agility": 3, "mind": 3, "heart": 4 },
+      "basic": { "name": "Sonic Riff", "stat": "mind", "damage": "d4", "flavour": "Music, weaponised." },
+      "skillIds": ["inspiring-verse", "cutting-jest", "healing-chorus"],
+      "blurb": "Fights with words first. The words are usually excellent."
+    }
+  ]
+}

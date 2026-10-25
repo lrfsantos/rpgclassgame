@@ -1,0 +1,28 @@
+{
+  "version": 2,
+  "skills": [
+    { "id": "power-strike", "name": "Power Strike", "classId": "warrior", "stat": "might", "target": "enemy", "effect": "attack", "damage": "d8", "cost": 1, "flavour": "A mighty overhead blow." },
+    { "id": "taunt", "name": "Taunt", "classId": "warrior", "stat": "heart", "target": "enemy", "effect": "debuff", "debuff": "skip", "cost": 1, "flavour": "The monster fixes on the Warrior and forgets everyone else." },
+    { "id": "shield-wall", "name": "Shield Wall", "classId": "warrior", "stat": "might", "target": "party", "effect": "shield", "cost": 1, "flavour": "A wall of trust and iron." },
+
+    { "id": "backstab", "name": "Backstab", "classId": "thief", "stat": "agility", "target": "enemy", "effect": "attack", "damage": "d6", "cost": 1, "flavour": "From the shadows, with apologies." },
+    { "id": "keen-eye", "name": "Keen Eye", "classId": "thief", "stat": "mind", "target": "party", "effect": "buff", "cost": 1, "flavour": "Spots a weak point. The next roll gets +3." },
+    { "id": "pickpocket", "name": "Pickpocket", "classId": "thief", "stat": "agility", "target": "enemy", "effect": "attack", "damage": "d4", "cost": 1, "steal": true, "flavour": "Success also lifts a little gold." },
+
+    { "id": "fireball", "name": "Fireball", "classId": "mage", "stat": "mind", "target": "enemy", "effect": "attack", "damage": "d10", "cost": 1, "flavour": "A very warm word, shouted correctly." },
+    { "id": "frost-bind", "name": "Frost Bind", "classId": "mage", "stat": "mind", "target": "enemy", "effect": "debuff", "debuff": "skip", "cost": 1, "flavour": "The monster's next move freezes mid-air." },
+    { "id": "mana-ward", "name": "Mana Ward", "classId": "mage", "stat": "mind", "target": "party", "effect": "shield", "cost": 1, "flavour": "A thin shimmer drinks one hit whole." },
+
+    { "id": "healing-word", "name": "Healing Word", "classId": "cleric", "stat": "heart", "target": "ally", "effect": "heal", "damage": "d6", "cost": 1, "flavour": "Kind words, physical results." },
+    { "id": "bless", "name": "Bless", "classId": "cleric", "stat": "heart", "target": "ally", "effect": "buff", "cost": 1, "flavour": "The next roll is quietly guaranteed better (+3)." },
+    { "id": "sanctuary", "name": "Sanctuary", "classId": "cleric", "stat": "mind", "target": "party", "effect": "shield", "cost": 1, "flavour": "One hit, politely declined." },
+
+    { "id": "aimed-shot", "name": "Aimed Shot", "classId": "ranger", "stat": "agility", "target": "enemy", "effect": "attack", "damage": "d8", "cost": 1, "flavour": "One breath out, one arrow gone." },
+    { "id": "trap-sense", "name": "Trap Sense", "classId": "ranger", "stat": "mind", "target": "party", "effect": "buff", "bonus": 2, "cost": 1, "flavour": "The next roll finds the safe path (+2)." },
+    { "id": "double-shot", "name": "Double Shot", "classId": "ranger", "stat": "agility", "target": "enemy", "effect": "attack", "damage": "2d4", "cost": 1, "flavour": "Two arrows, one breath." },
+
+    { "id": "inspiring-verse", "name": "Inspiring Verse", "classId": "bard", "stat": "heart", "target": "ally", "effect": "buff", "bonus": 3, "cost": 1, "flavour": "One perfect line. The next ally rolls with +3." },
+    { "id": "cutting-jest", "name": "Cutting Jest", "classId": "bard", "stat": "mind", "target": "enemy", "effect": "debuff", "debuff": "weaken", "cost": 1, "flavour": "So funny the monster forgets how to fight (-2 difficulty)." },
+    { "id": "healing-chorus", "name": "Healing Chorus", "classId": "bard", "stat": "heart", "target": "party", "effect": "heal", "damage": "d4", "cost": 1, "flavour": "Everyone hums along. Wounds close a little." }
+  ]
+}

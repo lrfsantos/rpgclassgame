@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Classroom RPG — Single Window</title>
+  <link rel="stylesheet" href="css/main.css" />
+  <script src="src/errors.js"></script>
+</head>
+<body class="single-window">
+  <div id="stage" class="single-stage"></div>
+
+  <button id="gm-drawer-open" class="drawer-open" title="Toggle GM console (G)">GM</button>
+
+  <aside id="gm-drawer" class="drawer">
+    <div class="drawer-head">
+      <span>GM Console</span>
+      <button id="gm-drawer-close" class="btn">Hide (G)</button>
+    </div>
+    <div class="drawer-body" id="gm"></div>
+  </aside>
+
+  <div id="start-overlay" class="start-overlay">
+    <div class="start-box">
+      <h1>Classroom RPG</h1>
+      <p>A saved game was found.</p>
+      <button id="start-continue" class="btn primary">Continue</button>
+      <button id="start-new" class="btn danger">New Game</button>
+    </div>
+  </div>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>

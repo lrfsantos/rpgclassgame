@@ -1,0 +1,53 @@
+{
+  "version": 2,
+  "decks": [
+    {
+      "id": "forest",
+      "name": "The Whispering Forest",
+      "flavour": "Birds sing off-key. The trees clap politely.",
+      "rooms": [
+        { "id": "forest-path", "kind": "combat", "level": 1, "flavour": "The path narrows. Something heavy breathes behind a fern." },
+        { "id": "forest-glade", "kind": "combat", "level": 1, "flavour": "A sunny glade. Too sunny. Something rustles." },
+        { "id": "forest-deep", "kind": "combat", "level": 2, "flavour": "Old trees, older shadows, newest danger." },
+        { "id": "forest-riddle", "kind": "challenge", "stat": "mind", "difficulty": 11, "flavour": "A stone circle hums a riddle only a clear sentence can answer." },
+        { "id": "forest-snare", "kind": "trap", "stat": "agility", "difficulty": 11, "flavour": "Vines twitch. This is a trap and it is proud of it." },
+        { "id": "forest-cache", "kind": "treasure", "flavour": "A hunter's cache: coins, a compass, half a sandwich." },
+        { "id": "forest-rest", "kind": "rest", "flavour": "A mossy clearing. The fire crackles an old folk song." },
+        { "id": "forest-omen", "kind": "event", "flavour": "A white stag crosses the path and nods once, respectfully." },
+        { "id": "forest-boss", "kind": "combat", "level": 3, "boss": true, "flavour": "The heart of the forest. Every branch turns toward you." }
+      ]
+    },
+    {
+      "id": "crypt",
+      "name": "The Cold Crypt",
+      "flavour": "Dust, old candles, and very patient residents.",
+      "rooms": [
+        { "id": "crypt-hall", "kind": "combat", "level": 1, "flavour": "A hall of tombs. One lid slides open by itself." },
+        { "id": "crypt-echo", "kind": "combat", "level": 1, "flavour": "Your footsteps echo back with the wrong rhythm." },
+        { "id": "crypt-post", "kind": "combat", "level": 2, "flavour": "A coffin-shaped guard post. Guard included." },
+        { "id": "crypt-epitaph", "kind": "challenge", "stat": "mind", "difficulty": 11, "flavour": "An epitaph is half worn away. Read it aloud to finish it." },
+        { "id": "crypt-floor", "kind": "trap", "stat": "agility", "difficulty": 11, "flavour": "Loose tiles. The floor has a sense of humour." },
+        { "id": "crypt-offering", "kind": "treasure", "flavour": "Offering plates from centuries of guilty travellers." },
+        { "id": "crypt-rest", "kind": "rest", "flavour": "A small chapel. The candles light themselves for you." },
+        { "id": "crypt-omen", "kind": "event", "flavour": "A cold wind carries a voice: it only says the word 'soon'." },
+        { "id": "crypt-boss", "kind": "combat", "level": 3, "boss": true, "flavour": "The throne of the Baron. He stands up. He bows. Then he attacks." }
+      ]
+    },
+    {
+      "id": "ruins",
+      "name": "The Sunken Ruins",
+      "flavour": "Broken columns, stubborn pigeons, older magic.",
+      "rooms": [
+        { "id": "ruins-gate", "kind": "combat", "level": 1, "flavour": "A gatehouse. The gate has opinions about visitors." },
+        { "id": "ruins-yard", "kind": "combat", "level": 1, "flavour": "A courtyard of broken statues. One statue blinks." },
+        { "id": "ruins-vault", "kind": "combat", "level": 2, "flavour": "The vault door lost its key but kept its temper." },
+        { "id": "ruins-inscription", "kind": "challenge", "stat": "mind", "difficulty": 12, "flavour": "Ancient words wait for a clear, correct reading aloud." },
+        { "id": "ruins-floor", "kind": "trap", "stat": "agility", "difficulty": 12, "flavour": "Some tiles are floors. Others are lies." },
+        { "id": "ruins-treasury", "kind": "treasure", "flavour": "The treasury of a kingdom that forgot to lock it." },
+        { "id": "ruins-rest", "kind": "rest", "flavour": "A library nook that survived everything, including the roof." },
+        { "id": "ruins-parade", "kind": "event", "flavour": "Ghostly trumpets announce a parade that ended 800 years ago." },
+        { "id": "ruins-boss", "kind": "combat", "level": 3, "boss": true, "flavour": "The central hall. The Sentinel wakes and asks for the password." }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+# NOTES.md — design decisions (v2, current design only)
+
+- Data-driven content (classes/skills/monsters/rooms/vocab/prompts) in /content JSON; engine in /src; content validated on load with friendly errors naming file+problem (keeps teachers able to edit content safely).
+- GM console is authoritative; it broadcasts the full state after every mutation; Stage requests state on load and retries until received (simplest correct two-window sync, BroadcastChannel).
+- Single-window index.html = stage fullscreen + GM drawer toggled by hotkey G (teachers without a second screen).
+- Engine is UI-agnostic: actions mutate state, UIs render from state (lets the same engine drive gm/stage/single-window and be tested headless).
+- Stats = Might/Agility/Mind/Heart, modifier = stat - 3, all classes sum to 12 (balanced identity with a small spread).
+- Action resolution = d20 + statMod + LanguageBonus + AssistBonus vs difficulty; nat 20 crit (auto-success, double damage dice), nat 1 fumble (auto-fail, fun narration) (classic, readable on a projector).
+- Language Check Off/Light/Full adds a pre-roll "Say it" prompt; teacher grades Weak/Good/Great = +0/+2/+4; target/example hints are teacher-only (English supports, never gates, the game).
+- Skills cost 1 Focus; Focus regens +1/round; basic attacks are free (a 0-Focus player can still fight).
+- Exactly 3 skills per class, complementary roles (party without a healer/buffer should feel it).
+- Spotlight rounds: only N characters act per round (default 4), fair rotating start; non-acting players may Assist (+1, max +2); dazed players may still Assist but not act (keeps 12-player combat short and inclusive).
+- Monster HP scales with ACTING characters = min(party, spotlight): maxHp = base + (acting-1)*5; base HP tuned to 10/15/20 for lv1/2/3 by a competent-play simulation so median fight is 3-6 rounds for 1/4/8/12 players (worst median 5, cap triggers ~0 for 4+ players); 12-round monster-retreat cap is only a safety net.
+- Combat cap: after 12 rounds the monster retreats for half score (bounded fights per the "short 3-6 round" spec).
+- HP 0 = dazed (sits out), never dead; a full wipe ends the expedition (clean, avoids deadlock with all-dazed retreats).
+- Challenge/trap rooms: one specific player rolls, rotating fairly (challengeIndex), using the same Language Check setting as any action.
+- NPC companion auto-joins for 1-2 players (or when toggled): Cleric, or Warrior if a Cleric exists; acts automatically (helps solo/tiny classes; teacher can turn it off).
+- Expeditions = 9 rooms from one themed deck (Forest/Crypt/Ruins): combat x3, challenge, trap, treasure, rest, event + final boss (themed coherence, boss finale, within 8-10 rooms).
+- Undo via a cap-60 snapshot history in the state layer; reroll re-resolves the last action with a fresh die keeping language/assist bonuses (teacher tools for free).
+- Old v1 saves are ignored (schema bump to 2) (avoid crashing on stale shapes).
+- All UI features are verified by headless-Edge tests that drive real clicks/keypresses and assert visible DOM text (user cannot test code; "green" engine tests alone are insufficient).
+- Global window.onerror + unhandledrejection banner with a Copy button on every page (a silent blank page must never happen again).
+- B0 UI (gm.js/stage.js) is plain-functionality styling using the AGENTS.md section 5 palette; art work (sprites, d20, typewriter, pixel font) is deferred to B1.
