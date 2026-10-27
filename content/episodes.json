@@ -48,7 +48,7 @@
           },
           "onGood": "The owl hoots happily and shows you a hidden path.",
           "onBad": "The owl sends you the long way around the forest.",
-          "flags": { "owlHelp": { "good": true } }
+          "flags": { "owlHelp": true }
         },
         {
           "id": "the-tower",
