@@ -28,4 +28,15 @@
 - Fonts: self-hosted OFL pixel font Press Start 2P for headings/logo + VT323 for long text in /assets/fonts (OFL, logged for CREDITS later).
 - Typewriter text (click/Enter skips) via src/ui/typewriter.js; respects prefers-reduced-motion (instant print).
 - Global error handler's file:// guard waited for body before appending (runs in <head>); fixed so the message actually shows when opening index.html directly.
+- B1.5 (audit-driven): stage.html + gm.html are the PRIMARY mode; index.html is secondary. Stage is a fixed 16:9 virtual canvas, scaled to fit with letterboxing (width min(100%, 100vh*16/9), aspect-ratio 16/9, --ss scale var), so drawer/canvas/sprites stop breaking resolution (layout.mjs verifies geometry at 5 viewports).
+- B1.5: sprites use INTEGER scales only (intSpriteScale = round(base * stageScaleFactor)), image-rendering pixelated everywhere, so pixel art stays crisp at any projector size.
+- B1.5: Stage zones = top-right minimap (expedition room nodes from existing data, placeholder only), center battlefield, bottom menu; text is >=28px at 1080p via --ss scaling; pixel font is for logo/titles ONLY (title-logo/app-title/big-title), all panels and headings use VT323.
+- B1.5: in index.html the GM drawer DOCKS beside the Stage (stage rescales into the remaining 16:9 area) instead of overlaying it; GM button hides while drawer is open (display:none via sibling selector). gm.html is a normal responsive page, no floating button.
+- B1.5: typo "The The Whispering Forest" fixed at source in content/prompts.json expeditionStart template ("The {deck}" -> "{deck}") because deckName already contains "The".
+- B1.5: ResizeObserver re-measures --ss and re-renders stage on any resize (so drawer open/close rescales the Stage correctly).
+- Step C (story plumbing, in progress): content/episodes.json holds scripted episodes; episode = ordered scenes (story = d20 + language-check roll that decides progress via onGood/onBad, combat = monster fight reusing the expedition combat engine).
+- Step C: startEpisode() builds the episode into the same expedition-shaped state (buildEpisodeExpedition in src/engine/episode.js), so story scenes reuse the existing challenge/roll/language machinery; scene-specific prompts (text/target/example) replace random vocab prompts when present.
+- Step C: per-scene outcomes (onGood/onBad) are logged as narration; success sets flags into expedition.flags (the "flags/memory" of what the party did), accessible for conditional scenes later.
+- Step C: episodes.json is validated (duplicate ids, stat/difficulty/monsterId/prompt checks) + cross-referenced (combat scene monsterId must exist) in content.js; the GM lobby shows a "Story episodes" section with a Play button per episode.
+- Step C: the shipped episode is "The Bell of Bellingham" (6 linear scenes: 5 story + 1 combat) where English output (judged Weak/Good/Great) decides whether the good or bad outcome is narrated.
 

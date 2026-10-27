@@ -15,6 +15,7 @@ const FILES = [
   "rooms.json",
   "vocabulary.json",
   "prompts.json",
+  "episodes.json",
 ];
 
 const STATS = ["might", "agility", "mind", "heart"];
@@ -30,6 +31,7 @@ const VALIDATORS = {
   "rooms.json": validateRooms,
   "vocabulary.json": validateVocabulary,
   "prompts.json": validatePrompts,
+  "episodes.json": validateEpisodes,
 };
 
 let cache = null;
@@ -76,9 +78,11 @@ function buildIndex(loaded) {
   const skills = loaded["skills.json"].skills;
   const monsters = loaded["monsters.json"].monsters;
   const decks = loaded["rooms.json"].decks;
+  const episodes = loaded["episodes.json"] ? loaded["episodes.json"].episodes : [];
   const skillById = new Map(skills.map((s) => [s.id, s]));
   const classById = new Map(classes.map((c) => [c.id, c]));
   const deckById = new Map(decks.map((d) => [d.id, d]));
+  const monsterById = new Map(monsters.map((m) => [m.id, m]));
   const errs = [];
 
   for (const c of classes) {
@@ -98,6 +102,18 @@ function buildIndex(loaded) {
     if (bosses.length !== 1) errs.push(`rooms.json: deck "${d.id}" needs exactly 1 boss monster (found ${bosses.length})`);
   }
 
+  // every deck must have exactly one boss monster
+  for (const d of decks) {
+    const bosses = monsters.filter((m) => m.deck === d.id && m.boss);
+    if (bosses.length !== 1) errs.push(`rooms.json: deck "${d.id}" needs exactly 1 boss monster (found ${bosses.length})`);
+  }
+  // episodes: every combat scene references an existing monster
+  for (const ep of episodes) {
+    for (const sc of (ep.scenes || [])) {
+      if (sc.kind === "combat" && !monsterById.has(sc.monsterId)) errs.push(`episodes.json: episode "${ep.id}" scene "${sc.id}" references unknown monster "${sc.monsterId}"`);
+    }
+  }
+
   if (errs.length > 0) {
     throw new ContentError(`cross-reference: ${errs.join("; ")}`);
   }
@@ -112,7 +128,40 @@ function buildIndex(loaded) {
     npcNames: loaded["prompts.json"].npcNames,
     playerNames: loaded["prompts.json"].playerNames,
     narrations: loaded["prompts.json"].narrations,
+    episodes,
   };
+}
+
+const SCENE_KINDS = ["story", "combat"];
+function validateEpisodes(data) {
+  if (!Array.isArray(data.episodes)) return ["missing array 'episodes'"];
+  const errs = [];
+  const seen = new Set();
+  data.episodes.forEach((ep, i) => {
+    errs.push(...fail(!seen.has(ep.id), `duplicate episode id "${ep.id}"`));
+    seen.add(ep.id);
+    errs.push(
+      ...fail(typeof ep.id === "string" && ep.id, `[${i}] missing id`),
+      ...fail(typeof ep.name === "string" && ep.name, `episode ${ep.id}: missing name`),
+      ...fail(Array.isArray(ep.scenes) && ep.scenes.length >= 3, `episode ${ep.id}: need at least 3 scenes`),
+      ...fail(Array.isArray(ep.scenes) && ep.scenes.every((sc) => SCENE_KINDS.includes(sc.kind) && typeof sc.id === "string" && typeof sc.flavour === "string"), `episode ${ep.id}: every scene needs id, kind (story|combat), flavour`)
+    );
+    if (!Array.isArray(ep.scenes)) return;
+    const seenScene = new Set();
+    ep.scenes.forEach((sc, j) => {
+      errs.push(...fail(!seenScene.has(sc.id), `episode ${ep.id}: duplicate scene id "${sc.id}"`));
+      seenScene.add(sc.id);
+      errs.push(
+        ...fail(sc.kind !== "story" || STATS.includes(sc.stat), `episode ${ep.id}: story scene ${sc.id} bad stat "${sc.stat}"`),
+        ...fail(sc.kind !== "story" || Number.isFinite(sc.difficulty), `episode ${ep.id}: story scene ${sc.id} needs a numeric difficulty`),
+        ...fail(sc.kind !== "combat" || typeof sc.monsterId === "string", `episode ${ep.id}: combat scene ${sc.id} needs monsterId`),
+        ...fail(sc.prompt && typeof sc.prompt.text === "string" && typeof sc.prompt.target === "string" && typeof sc.prompt.example === "string", `episode ${ep.id}: scene ${sc.id} needs prompt {text, target, example}`),
+        ...fail(sc.conditional === undefined || (typeof sc.conditional.flag === "string" && sc.conditional.whenSet && sc.conditional.whenUnset), `episode ${ep.id}: scene ${sc.id} conditional needs {flag, whenSet, whenUnset}`),
+        ...fail(sc.flags === undefined || typeof sc.flags === "object", `episode ${ep.id}: scene ${sc.id} flags must be an object`)
+      );
+    });
+  });
+  return errs;
 }
 
 function fail(cond, msg) {

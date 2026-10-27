@@ -48,6 +48,10 @@ export function mountGm(container) {
       case "start-expedition":
         actions.startExpedition();
         break;
+      case "start-episode": {
+        actions.startEpisode(value);
+        break;
+      }
       case "use-skill": {
         const spec = JSON.parse(value);
         actions.chooseAction(spec.playerId, spec.skillId);
@@ -180,6 +184,18 @@ function renderLobby(s) {
     disabled: ready ? null : "",
   }, `Start Expedition (${s.players.length} players)`));
   if (!ready && s.players.length > 0) body.appendChild(el("p", { class: "muted" }, "All players need a class."));
+
+  // episodes (scripted stories)
+  const eps = getContent().episodes;
+  if (eps && eps.length > 0) {
+    body.appendChild(el("h2", {}, "Story episodes"));
+    for (const ep of eps) {
+      const row = el("div", { class: "player-row" });
+      row.appendChild(el("span", { class: "pname" }, ep.name));
+      row.appendChild(el("button", { "data-action": "start-episode", "data-value": ep.id, class: "primary", disabled: ready ? null : "" }, `Play story (${ep.scenes.length} scenes)`));
+      body.appendChild(row);
+    }
+  }
 
   // settings
   const settings = el("div", { class: "window" });

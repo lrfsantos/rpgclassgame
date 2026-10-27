@@ -1,0 +1,110 @@
+{
+  "version": 1,
+  "episodes": [
+    {
+      "id": "the-bell-of-bellingham",
+      "name": "The Bell of Bellingham",
+      "flavour": "The village bell has not rung in a hundred years. The Moss King took the clapper to the top of the sunken tower. The party climbs to wake the bell.",
+      "scenes": [
+        {
+          "id": "the-quiet-village",
+          "kind": "story",
+          "stat": "heart",
+          "difficulty": 10,
+          "flavour": "The village of Bellingham is too quiet. The Elder shows you a silent bell at the square. 'Wake our bell,' she says. 'The Moss King stole the clapper.'",
+          "prompt": {
+            "text": "Say who your hero is and promise something out loud.",
+            "target": "Make a promise sentence about the bell.",
+            "example": "I promise we will wake the bell today!"
+          },
+          "onGood": "The Elder smiles. 'Good. The path leads to the Tower of Echoes.'",
+          "onBad": "The Elder nods slowly. 'Hm. We will see.'"
+        },
+        {
+          "id": "the-toll-bridge",
+          "kind": "story",
+          "stat": "heart",
+          "difficulty": 11,
+          "flavour": "A river blocks the way. A grumpy toll-keeper sits by a rope bridge.",
+          "prompt": {
+            "text": "Ask the toll-keeper politely to let the party cross.",
+            "target": "A polite question with 'May we' or 'Could we'.",
+            "example": "Could we please cross the bridge, kind keeper?"
+          },
+          "onGood": "The keeper shrugs and lowers the rope. 'Fine. Go on, then.'",
+          "onBad": "The keeper raises the rope. 'No sweet words, no crossing.' The party swims across, cold and wet.",
+          "flags": { "crossedBridge": true }
+        },
+        {
+          "id": "the-dark-forest",
+          "kind": "story",
+          "stat": "mind",
+          "difficulty": 12,
+          "flavour": "Inside the forest, a talking owl asks a riddle to let you pass.",
+          "prompt": {
+            "text": "Answer the owl's riddle: 'What grows louder the more you take from it?'",
+            "target": "A complete sentence with 'the more... the more'.",
+            "example": "The more you take from a hole, the bigger the hole gets."
+          },
+          "onGood": "The owl hoots happily and shows you a hidden path.",
+          "onBad": "The owl sends you the long way around the forest.",
+          "flags": { "owlHelp": { "good": true } }
+        },
+        {
+          "id": "the-tower",
+          "kind": "combat",
+          "level": 2,
+          "monsterId": "cracked-golem",
+          "flavour": "At last, the Tower of Echoes. The Moss King's guard — a golem of cracked stone — blocks the stairs.",
+          "prompt": {
+            "text": "Tell the golem why the bell must ring again.",
+            "target": "A sentence with 'because'.",
+            "example": "The bell must ring because the village has been silent for a hundred years."
+          },
+          "onGood": "The golem rumbles, confused, and gives you an opening.",
+          "onBad": "The golem shows no mercy. It attacks!"
+        },
+        {
+          "id": "the-clapper",
+          "kind": "story",
+          "stat": "agility",
+          "difficulty": 13,
+          "flavour": "High in the tower, the clapper hangs on a chain above a bottomless drop. One person must climb and grab it.",
+          "conditional": {
+            "flag": "crossedBridge",
+            "whenSet": {
+              "difficulty": 11,
+              "flavour": "The toll-keeper's rope is still tied to the tower wall. With it, the climb is easy."
+            },
+            "whenUnset": {
+              "difficulty": 13,
+              "flavour": "No rope, no help. The climb is steep and the chain swings far."
+            }
+          },
+          "prompt": {
+            "text": "Shout an order to the climber, using 'carefully'.",
+            "target": "An instruction with the adverb 'carefully'.",
+            "example": "Carefully grab the chain, and don't look down!"
+          },
+          "onGood": "The clapper is caught! The party races back down.",
+          "onBad": "The clapper swings away, but with one brave jump you still catch it — barely.",
+          "flags": { "clapperCaught": true }
+        },
+        {
+          "id": "the-bell-rings",
+          "kind": "story",
+          "stat": "heart",
+          "difficulty": 10,
+          "flavour": "Back in the square, the party fits the clapper into the bell. The whole village watches in silence.",
+          "prompt": {
+            "text": "Say one sentence to wake the bell and the village.",
+            "target": "An exclamation or a wish with 'may'.",
+            "example": "May this bell ring for a hundred more years!"
+          },
+          "onGood": "BONG! The bell rings across the valley. The village cheers!",
+          "onBad": "BONG! The bell rings, a little off-key. The village cheers anyway."
+        }
+      ]
+    }
+  ]
+}

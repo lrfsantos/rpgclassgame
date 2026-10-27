@@ -2,6 +2,7 @@
 import { mutate, getState, undo, newGameState } from "./state.js";
 import { getContent } from "./content.js";
 import { generateExpedition } from "./expedition.js";
+import { buildEpisodeExpedition } from "./episode.js";
 import { Dice, newSeed } from "./rng.js";
 
 const BASE_DIFFICULTY = 10;
@@ -45,7 +46,9 @@ function currentRoom(s) {
 
 function log(s, text, kind = "system") {
   s.expedition.log.unshift({ text, kind, t: Date.now() });
-  if (s.expedition.log.length > 60) s.expedition.log.length = 60;
+  // episodes are stories: keep the whole transcript (combat can push past 60)
+  const cap = s.expedition.mode === "episode" ? 400 : 60;
+  if (s.expedition.log.length > cap) s.expedition.log.length = cap;
 }
 
 function pickNarration(s, key, vars = {}) {
@@ -193,6 +196,49 @@ export function startExpedition() {
   });
 }
 
+// ---------- episode (story mode) ----------
+
+export function startEpisode(episodeId) {
+  return mutate((s) => {
+    if (s.phase !== "lobby") return s;
+    if (s.players.length === 0 || s.players.some((p) => !p.classId)) return s;
+    const ep = getContent().episodes.find((e) => e.id === episodeId);
+    if (!ep) return s;
+    s.phase = "expedition";
+    s.party = { score: 0, gold: 0 };
+    s.expedition = buildEpisodeExpedition(ep);
+    s.expedition.log = [];
+    s.expedition.monster = null;
+    s.expedition.round = 1;
+    s.expedition.roundStart = 0;
+    s.expedition.spotlight = [];
+    s.expedition.spotlightIndex = 0;
+    s.expedition.activePlayerId = null;
+    s.expedition.actionPhase = "idle";
+    s.expedition.pending = null;
+    s.expedition.langPrompt = null;
+    s.expedition.langBonus = 0;
+    s.expedition.assistBonus = 0;
+    s.expedition.assistUsed = [];
+    s.expedition.lastRoll = null;
+    s.expedition.lastAction = null;
+    s.expedition.guard = 0;
+    s.expedition.monsterSkip = 0;
+    s.expedition.monsterWeaken = 0;
+    s.expedition.buff = 0;
+    s.expedition.challengeIndex = 0;
+    s.expedition.usedPromptIds = [];
+    s.expedition.npcId = null;
+    s.expedition.mode = "episode";
+    s.expedition.flags = {};
+
+    log(s, `${ep.name}: ${ep.flavour}`, "system");
+    maybeAddNpc(s);
+    enterCurrentRoom(s);
+    return s;
+  });
+}
+
 function maybeAddNpc(s) {
   const hs = humans(s);
   const wantNpc = s.settings.npcCompanion || hs.length <= 2;
@@ -223,6 +269,15 @@ function enterCurrentRoom(s) {
   s.expedition.assistBonus = 0;
   s.expedition.assistUsed = [];
   s.expedition.lastRoll = null;
+
+  // episode conditional scenes: resolve difficulty/flavour from flags at entry
+  if (ev.conditional) {
+    const branch = s.expedition.flags && s.expedition.flags[ev.conditional.flag] ? ev.conditional.whenSet : ev.conditional.whenUnset;
+    if (branch) {
+      if (Number.isFinite(branch.difficulty)) ev.difficulty = branch.difficulty;
+      if (branch.flavour) room.flavour = branch.flavour;
+    }
+  }
 
   if (ev.type === "combat") {
     if (aliveHumans(s).length === 0) {
@@ -377,7 +432,7 @@ function applyAction(s, playerId, skillId, opts = {}) {
     resolveRoll(s, exp.langBonus, exp.assistBonus, opts.forceD20 || null);
   } else {
     exp.actionPhase = "acting";
-    exp.langPrompt = pickLangPrompt(s);
+    exp.langPrompt = currentRoom(s).event.scenePrompt || pickLangPrompt(s);
     exp.langBonus = 0;
     log(s, `Say it! ${exp.langPrompt.text}`, "language");
   }
@@ -407,6 +462,18 @@ export function judgeLanguage(bonus) {
     const actor = playerById(s, exp.pending.playerId);
     const key = bonus >= 4 ? "languageGood" : bonus >= 2 ? "languageMid" : "languageWeak";
     log(s, pickNarration(s, key, { player: actor.name }), "language");
+    // episode story scenes: the English grade decides the narrated outcome + flags
+    // (applies to story AND combat scenes that carry an onGood/onBad outcome)
+    {
+      const room = currentRoom(s);
+      const scene = room.event.scene;
+      const good = bonus >= 2;
+      if (scene) {
+        if (scene.onGood && good) log(s, scene.onGood, "challenge");
+        else if (scene.onBad && !good) log(s, scene.onBad, "challenge");
+        if (good && scene.flags) Object.assign(exp.flags || (exp.flags = {}), scene.flags);
+      }
+    }
     resolveRoll(s, bonus, exp.assistBonus, null);
     return s;
   });
