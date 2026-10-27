@@ -39,4 +39,8 @@
 - Step C: per-scene outcomes (onGood/onBad) are logged as narration; success sets flags into expedition.flags (the "flags/memory" of what the party did), accessible for conditional scenes later.
 - Step C: episodes.json is validated (duplicate ids, stat/difficulty/monsterId/prompt checks) + cross-referenced (combat scene monsterId must exist) in content.js; the GM lobby shows a "Story episodes" section with a Play button per episode.
 - Step C: the shipped episode is "The Bell of Bellingham" (6 linear scenes: 5 story + 1 combat) where English output (judged Weak/Good/Great) decides whether the good or bad outcome is narrated.
+- Step D: accessibility — `:focus-visible` outlines on buttons/inputs/selects/textarea/links; the GM drawer moves focus to its close button when opened and back to the GM button on close; the start overlay focuses Continue when shown. Reduced motion was already handled (B1).
+- Step D: narrow screens (max-width 720px) stack the drawer under the stage instead of beside it (single-window still usable on a phone/tablet as a fallback).
+- Step D: visible version badge "v2.1.0" (index drawer header + gm.html footer) so stale GitHub Pages cache is diagnosable; cache busting via version string, no service worker yet (offline deferred).
+- Step D: README.md rewritten for the current build (episodes, tests, subpath, layout); CONTENT_GUIDE.md (how to edit content incl. episodes) and CREDITS.md (OFL fonts logged) added.
 

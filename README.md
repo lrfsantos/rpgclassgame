@@ -1,15 +1,16 @@
-# Classroom RPG — README
+# Classroom RPG
 
 A tabletop-style RPG for ESL classrooms, played by a whole class around one
-shared projector screen. Students do **not** use their own devices. The game +
-the teacher together act as the Game Master: the game runs rules, dice, HP,
-turn order, monsters and narration; the teacher judges spoken English and
+shared projector. Students do **not** use their own devices. The game and the
+teacher together act as the Game Master: the game runs rules, dice, HP, turn
+order, monsters and narration; the teacher judges spoken English and
 improvises.
 
 - **Players:** 1 to 12 (typically 1 to 8). Each player has their own character.
 - **Audience:** teens / young adults. Vocabulary A2–B2, on-screen reading ~B1.
-- **Version 1:** base game with a Random Expedition mode. Later versions add
-  episode story campaigns.
+- **Tone:** warm, funny, a bit epic.
+- **Modes:** Random Expedition (8–10 themed rooms) and Story Episodes
+  (scripted linear scenes where spoken English decides progress).
 
 ## Running the game
 
@@ -20,7 +21,7 @@ BroadcastChannel need a local server. Use one of these:
 ### Option A — start.bat (Windows, recommended)
 Double-click `start.bat` in the project root. It opens `http://localhost:8000`
 in your default browser and starts a local server, trying (in order):
-1. `node server.js` (bundled, no installs — preferred fallback),
+1. `node server.js` (bundled, no installs — preferred),
 2. `py -m http.server 8000`,
 3. `python -m http.server 8000`.
 
@@ -29,82 +30,99 @@ you to use the VS Code Live Server extension or GitHub Pages (below).
 
 > Note: on Windows the Microsoft Store Python "alias" (the `python.exe` in
 > `...\WindowsApps`) does not actually run `http.server`. `start.bat` avoids
-> it by preferring Node.js. Node is bundled via `server.js` so no install is
-> needed. If you prefer Python, install it from python.org (check "Add to
-> PATH") — but it's not required.
+> it by preferring Node.js. If you prefer Python, install it from python.org
+> (check "Add to PATH") — but it's not required.
 
 ### Option B — VS Code "Live Server" extension
 Install the **Live Server** extension, right-click `index.html` and choose
 *Open with Live Server*. A browser tab opens with a local server already set up.
 
 ### Option C — GitHub Pages
-Push this repository to GitHub, enable Pages on the repository (branch `main`,
-root folder). The game runs at
-`https://YOUR-USERNAME.github.io/YOUR-REPO/`.
+This repo is published at https://lrfsantos.github.io/rpgclassgame/. All asset
+and fetch paths are relative, so the game runs under the `/rpgclassgame/`
+subpath. It is *not* cached offline (no service worker yet).
 
-## Three ways to play
+## How to play
 
-| File        | What it is                                                              |
-|-------------|-------------------------------------------------------------------------|
-| `gm.html`   | **GM Console** — the teacher's view. Holds the authoritative game state. |
-| `stage.html`| **Stage** — what students see on the projector. Read-only, no spoilers.  |
-| `index.html`| **Single-window mode** — Stage fills the screen; the GM Console is a drawer toggled with the hotkey (default **G**). For teachers without a second screen. |
+1. Open the game (see above).
+2. In the GM Console (single-window mode: press **G** to open the drawer),
+   add 1–12 players and give them names (or roll random names).
+3. Let each player pick a class (the Stage shows the choices — no spoilers).
+4. Choose a mode:
+   - **Random Expedition** — a themed 9-room run (combat, challenges, traps,
+     treasure, rest, events, a final boss).
+   - **Story Episode** (e.g. "The Bell of Bellingham") — a linear story where
+     the class answers "Say it" prompts out loud; the teacher grades
+     Weak/Good/Great and the English decides what happens next.
+5. Play. Dice, HP, Focus, spotlight rounds, Assists and language checks are all
+   run by the game; the teacher judges spoken English and improvises.
 
-`gm.html` and `stage.html` stay in sync on the same computer using
-`BroadcastChannel`. The GM console broadcasts its state to the Stage; when the
-Stage loads or reconnects it requests the current state. Single-window mode
-uses the same two views in one tab.
-
-> Tip: in two-window mode, open `gm.html` on the teacher laptop and
-> `stage.html` on the projector. The GM console is the source of truth — keep
-> it open.
-
-## First time playing
-
-1. Start the game (see above).
-2. In the GM Console, choose **New Game**.
-3. Add 1–12 players and give them names (or let the game roll random names).
-4. Let each player pick a class (the stage shows the choices — no reading
-   ahead, no spoilers).
-5. Launch the **Random Expedition**. The game rolls the dice and narrates.
-
-All state is saved automatically to `localStorage`. Use **Continue** to resume
-after closing a tab.
+Two-window mode: open `gm.html` (teacher laptop) and `stage.html` (projector)
+in the same browser. The GM console is the source of truth; the Stage follows
+via BroadcastChannel. All state is saved to `localStorage` (Continue / New Game).
 
 ## What is content vs. code
 
 Everything the players meet is **data**, not code. Edit the JSON files in
-`/content` to change the game without touching the engine:
+`/content` to change the game without touching the engine (see
+**CONTENT_GUIDE.md**):
 
-| File                  | Contains                                              |
-|-----------------------|-------------------------------------------------------|
-| `content/classes.json`| Player classes (name, HP, attack, skills, blurb)      |
-| `content/skills.json` | Class/global skills (dice, effects, flavour)          |
-| `content/monsters.json`| Monsters (HP, attack, xp, quirks, vocabulary hooks)  |
-| `content/rooms.json`  | Room templates for expeditions                        |
-| `content/vocabulary.json` | Vocabulary word packs (topic, level, words, prompts) |
-| `content/prompts.json`| Narration / speaking prompts for each situation       |
+| File                | Contains                                              |
+|---------------------|-------------------------------------------------------|
+| `content/classes.json` | Player classes (name, stats, HP, attack, skills)   |
+| `content/skills.json`  | Class skills (dice, effects, flavour)               |
+| `content/monsters.json`| Monsters (HP, dice, difficulty, quirks, vocab hooks)|
+| `content/rooms.json`   | Expedition room templates by themed deck            |
+| `content/episodes.json`| Scripted story episodes (scenes, prompts, flags)    |
+| `content/vocabulary.json` | Language-check prompt packs (A2–B2)              |
+| `content/prompts.json` | Narration and speaking prompts for each situation   |
 
 The engine validates all content on load and shows a friendly error naming the
-broken file if something is wrong.
+broken file and problem. Sprites come from `assets/sprites/manifest.json` (see
+**SPRITE_GUIDE.md**); missing PNGs fall back to code-drawn placeholders.
 
 ## Project layout
 
 ```
 protogame/
-├── index.html        single-window mode
-├── stage.html        projector stage
-├── gm.html           teacher console
-├── start.bat         local server launcher (Node or Python)
-├── server.js         tiny static server used by start.bat (Node)
-├── css/              styles
-├── src/
-│   ├── main.js       entry / router
-│   ├── engine/       rules, state, rng, validation, expedition
-│   ├── sync/         BroadcastChannel sync
-│   └── ui/           stage & GM console views
-└── content/          all JSON game data
+├─ index.html        single-window mode (Stage + GM drawer, hotkey G)
+├─ stage.html        projector stage (read-only, no spoilers)
+├─ gm.html           teacher console
+├─ start.bat         local server launcher (Node or Python)
+├─ server.js         tiny static server used by start.bat (Node)
+├─ css/              styles (section-5 palette, pixel fonts, 16:9 stage)
+├─ src/
+│  ├─ main.js        entry / router / drawer
+│  ├─ engine/        rules, state, rng, content, expedition, episode, sprites, audio
+│  ├─ sync/          BroadcastChannel sync
+│  └─ ui/            stage & GM console views, typewriter
+├─ content/          all JSON game data
+├─ tests/            headless-Edge UI tests + engine tests
+├─ assets/           fonts (OFL) + sprite manifest
+├─ AUDIT.md          audit checklist (pre-B1.5)
+├─ AUDIT_02.md       audit checklist (post-B1.5 / Step C)
+├─ SPRITE_GUIDE.md   how to add real sprite art
+├─ CONTENT_GUIDE.md  how to edit game content
+└─ NOTES.md          design decisions (one line each, decision + reason)
+```
+
+## Tests
+
+The user cannot run tests by hand, so every UI feature is verified by a
+headless-Edge test that drives the real UI (clicks + keypresses) and asserts
+visible DOM. Requires the local server on port 8000, then run from the project
+root:
+
+```
+node tests/ui-smoke.mjs     drawer open/close via click + G/Escape
+node tests/ui-fullrun.mjs   full expedition through the real UI
+node tests/ui-episode.mjs   story episode: prompts, narration, flags, spoilers
+node tests/layout.mjs       fixed 16:9 geometry at 5 viewports
+node tests/validator.mjs    content validation (bad files fail with messages)
+node tests/functional.mjs   engine rules (undo, reroll, NPC, spotlight)
+node tests/stress.mjs       120 random runs, every run must end cleanly
 ```
 
 ## License / notes
-See `NOTES.md` for design decisions and the change log.
+See `NOTES.md` for design decisions and the change log, and `CREDITS.md` for
+third-party assets (fonts are OFL).

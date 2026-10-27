@@ -8,6 +8,7 @@ import { mountStage } from "./ui/stage.js";
 import { mountGm } from "./ui/gm.js";
 import { openGmChannel, openStageChannel } from "./sync/broadcast.js";
 
+export const VERSION = "v2.1.0";
 const page = window.location.pathname.split("/").pop() || "index.html";
 
 async function boot() {
@@ -75,15 +76,21 @@ function bootSingle() {
   const openBtn = document.getElementById("gm-drawer-open");
   const closeBtn = document.getElementById("gm-drawer-close");
   const drawer = document.getElementById("gm-drawer");
-  openBtn.addEventListener("click", () => drawer.classList.toggle("open"));
-  closeBtn.addEventListener("click", () => drawer.classList.remove("open"));
+  const toggle = (force) => {
+    const opening = typeof force === "boolean" ? force : !drawer.classList.contains("open");
+    drawer.classList.toggle("open", opening);
+    if (opening) closeBtn.focus();
+    else openBtn.focus();
+  };
+  openBtn.addEventListener("click", () => toggle());
+  closeBtn.addEventListener("click", () => toggle(false));
 
   window.addEventListener("keydown", (ev) => {
     const key = ev.key.toLowerCase();
     if (key === "g" && !ev.ctrlKey && !ev.metaKey && !ev.altKey) {
-      drawer.classList.toggle("open");
+      toggle();
     } else if (ev.key === "Escape") {
-      drawer.classList.remove("open");
+      toggle(false);
     }
   });
 }
@@ -97,14 +104,17 @@ function chooseStart() {
     }
     const overlay = document.getElementById("start-overlay");
     overlay.classList.add("show");
-    document.getElementById("start-continue").addEventListener("click", () => {
+    const cont = document.getElementById("start-continue");
+    const neu = document.getElementById("start-new");
+    cont.focus();
+    const done = () => {
       overlay.classList.remove("show");
       resolve();
-    });
-    document.getElementById("start-new").addEventListener("click", () => {
+    };
+    cont.addEventListener("click", () => done());
+    neu.addEventListener("click", () => {
       state.reset();
-      overlay.classList.remove("show");
-      resolve();
+      done();
     });
   });
 }
