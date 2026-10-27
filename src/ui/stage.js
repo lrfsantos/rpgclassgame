@@ -1,5 +1,6 @@
-// Stage view (v2 + B1): JRPG battle layout, title screen, sprites, d20, typewriter.
-// Read-only, no spoilers, no teacher-only info (language hints stay in GM console).
+// Stage view (v2 + B1.5): fixed 16:9 virtual canvas, letterboxed, integer sprite
+// scaling, pixelated rendering. Title screen, JRPG battle layout, minimap
+// placeholder, sprites, d20, typewriter. Read-only, no spoilers.
 import { getState, subscribe } from "../engine/state.js";
 import { getContent } from "../engine/content.js";
 import { loadSprites, mountSprite } from "../engine/sprites.js";
@@ -10,6 +11,18 @@ import { typewriterText } from "./typewriter.js";
 let rootEl = null;
 const REDUCED = typeof window !== "undefined" && window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+// Stage is a fixed 16:9 box. scaleFactor = stageWidth/1920 so that at 1080p it
+// is 1.0; text and sprites scale off it. Sprites use INTEGER scales only.
+let stageScaleFactor = 1;
+function measureStage() {
+  if (!rootEl) return;
+  stageScaleFactor = rootEl.clientWidth > 0 ? rootEl.clientWidth / 1920 : 1;
+  rootEl.style.setProperty("--ss", String(stageScaleFactor));
+}
+function intSpriteScale(base) {
+  return Math.max(1, Math.round(base * stageScaleFactor));
+}
+
 export async function mountStage(container) {
   rootEl = el("div", { class: "stage" });
   container.appendChild(rootEl);
@@ -17,8 +30,19 @@ export async function mountStage(container) {
     await loadSprites();
   } catch (e) { /* sprites optional */ }
   audio.initAudio();
+  measureStage();
   render();
   subscribe(() => render());
+  if (typeof ResizeObserver !== "undefined") {
+    const ro = new ResizeObserver(() => { measureStage(); render(); });
+    ro.observe(rootEl);
+  } else {
+    let resizeTimer = null;
+    window.addEventListener("resize", () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => { measureStage(); render(); }, 120);
+    });
+  }
 }
 
 function className(id) {
@@ -29,6 +53,7 @@ function className(id) {
 function render() {
   const state = getState();
   if (!rootEl) return;
+  measureStage();
   rootEl.innerHTML = "";
   if (state.phase === "lobby") { rootEl.appendChild(renderTitle(state)); return; }
   if (state.phase === "victory" || state.phase === "defeated") { rootEl.appendChild(renderRecap(state)); return; }
@@ -39,26 +64,32 @@ function render() {
 function renderTitle(s) {
   const wrap = el("div", { class: "title-screen" });
   const hills = el("canvas", { class: "title-hills" });
-  hills.width = 320; hills.height = 100;
+  const w = Math.max(320, rootEl.clientWidth || 320);
+  const h = Math.max(180, rootEl.clientHeight || 180);
+  hills.width = w; hills.height = h;
   const ctx = hills.getContext("2d");
-  ctx.fillStyle = "#2a241d"; ctx.fillRect(0, 0, 320, 100);
+  // sky
+  ctx.fillStyle = "#2a241d"; ctx.fillRect(0, 0, w, h);
+  // parallax hills (integer pixel grid)
+  const g = Math.max(4, Math.round(w / 320)); // pixels per art-pixel
   ctx.fillStyle = "#1b1713";
-  for (let x = 0; x < 320; x += 8) { const y = 40 + ((x * 7) % 40); ctx.fillRect(x, y, 6, 100 - y); }
+  for (let x = 0; x < w; x += 8 * g) { const y = Math.round(h * 0.5) + ((x * 7) % (h * 0.3)); ctx.fillRect(x, y, 6 * g, h - y); }
   ctx.fillStyle = "#3a5a2a";
-  for (let x = 0; x < 320; x += 12) { const y = 62 + ((x * 5) % 24); ctx.fillRect(x, y, 8, 100 - y); }
+  for (let x = 0; x < w; x += 12 * g) { const y = Math.round(h * 0.62) + ((x * 5) % (h * 0.22)); ctx.fillRect(x, y, 8 * g, h - y); }
   ctx.fillStyle = "#6a994e";
-  for (let x = 4; x < 320; x += 16) { ctx.fillRect(x, 78 + ((x * 3) % 12), 6, 22); }
+  for (let x = 4 * g; x < w; x += 16 * g) { ctx.fillRect(x, Math.round(h * 0.72) + ((x * 3) % (h * 0.12)), 6 * g, h * 0.2); }
   wrap.appendChild(hills);
 
-  const logo = el("h1", { class: "title-logo" }, "CLASSROOM RPG");
-  wrap.appendChild(logo);
-  wrap.appendChild(el("div", { class: "title-sub" }, "A tabletop adventure for your English class"));
+  const content = el("div", { class: "title-content" });
+  content.appendChild(el("h1", { class: "title-logo" }, "CLASSROOM RPG"));
+  content.appendChild(el("div", { class: "title-sub" }, "A tabletop adventure for your English class"));
 
   const menu = el("div", { class: "title-menu" });
   const hasSave = s.players.length > 0 || !!s.expedition;
   menu.appendChild(el("div", { class: (hasSave ? "title-state" : "title-state empty") }, hasSave ? "A saved game is waiting on the teacher console." : "No players yet."));
-  menu.appendChild(el("div", { class: "muted" }, "Teacher: press G to open the GM console"));
+  wrap.appendChild(content);
   wrap.appendChild(menu);
+  wrap.appendChild(el("div", { class: "title-hint" }, "Teacher: press G to open the GM console"));
 
   return wrap;
 }
@@ -71,13 +102,24 @@ function renderBattle(s) {
 
   const field = el("div", { class: "battle-field" });
 
+  // minimap placeholder (top-right): expedition rooms as nodes
+  const map = el("div", { class: "stage-map" });
+  map.appendChild(el("div", { class: "map-title" }, exp.deckName));
+  const nodes = el("div", { class: "map-nodes" });
+  exp.rooms.forEach((r, i) => {
+    const cls = "map-node" + (i === exp.current ? " current" : "") + (r.kind === "combat" && r.boss ? " boss" : "");
+    nodes.appendChild(el("span", { class: cls, title: r.kind }, String(i + 1)));
+  });
+  map.appendChild(nodes);
+  field.appendChild(map);
+
   // enemies on the right
   if (exp.monster) {
     const en = el("div", { class: "battle-enemies" });
     const slot = el("div", { class: "enemy-slot" });
     const key = exp.monster.id || "grumble-slime";
     const frame = exp.monster.hp === 0 ? "down" : "idle-1";
-    mountSprite(slot, key, frame, exp.monster.boss ? 2 : 1.6);
+    mountSprite(slot, key, frame, exp.monster.boss ? intSpriteScale(2) : intSpriteScale(4));
     slot.appendChild(el("div", { class: "pname-tag" }, exp.monster.name));
     slot.appendChild(bar(exp.monster.hp, exp.monster.maxHp, "hp"));
     en.appendChild(slot);
@@ -88,7 +130,7 @@ function renderBattle(s) {
   const party = el("div", { class: "battle-party" });
   for (const p of s.players) {
     const slot = el("div", { class: "party-slot" });
-    mountSprite(slot, p.classId || "warrior", p.hp === 0 ? "down" : "idle-1", 1.2);
+    mountSprite(slot, p.classId || "warrior", p.hp === 0 ? "down" : "idle-1", intSpriteScale(4));
     slot.appendChild(el("div", { class: "pname-tag" }, `${p.name}${p.npc ? " (NPC)" : ""}`));
     slot.appendChild(bar(p.hp, p.maxHp, "hp"));
     slot.appendChild(bar(p.focus, p.maxFocus, "focus"));

@@ -7,7 +7,7 @@
   "npcNames": ["Pip the Squire", "Biscuit the Dog", "Nadia the Guide"],
   "narrations": {
     "expeditionStart": [
-      "The {deck} expedition begins! Onward, heroes.",
+      "{deck} expedition begins! Onward, heroes.",
       "A brave party steps into {deck}. Anything could happen!"
     ],
     "monsterAppears": [

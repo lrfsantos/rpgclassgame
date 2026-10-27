@@ -97,74 +97,81 @@ h1, h2, h3 { color: var(--gold); font-weight: 700; }
 .party-adjust { margin-top: 10px; }
 .party-adjust .pa-row { display: flex; gap: 8px; align-items: center; padding: 2px 0; }
 
-/* ============ Stage ============ */
-.stage { min-height: 100vh; display: flex; flex-direction: column; }
-.stage-header {
-  display: flex; justify-content: space-between; align-items: center;
-  background: var(--bg2); border-bottom: 2px solid var(--panel-line);
-  padding: 10px 16px;
+/* ============ Stage: fixed 16:9 virtual canvas ============ */
+#stage.full, #stage.single-stage { height: 100vh; display: flex; align-items: center; justify-content: center; background: #000; }
+.stage {
+  --ss: 1;
+  position: relative;
+  width: min(100%, calc(100vh * 16 / 9));
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: var(--bg2);
+  image-rendering: pixelated;
 }
-.app-title { color: var(--gold); font-size: 22px; font-weight: 800; letter-spacing: 1px; }
-.header-stats { display: flex; gap: 10px; }
-.badge { border: 2px solid var(--panel-line); padding: 3px 10px; font-size: 14px; color: var(--bone-dim); }
-.stage-main { flex: 1; display: flex; min-height: 0; }
-.room-pane { flex: 1; padding: 18px 24px; overflow: auto; }
-.big { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
-.big-title { color: var(--gold); font-size: 40px; font-weight: 900; }
-.big-title.win { color: var(--moss); }
-.big-title.lose { color: var(--brick); }
-.big-sub { color: var(--bone-dim); font-size: 19px; margin-top: 8px; }
-.room-name { color: var(--gold); font-size: 26px; font-weight: 800; }
-.room-flavour { color: var(--bone-dim); font-size: 16px; margin: 4px 0 12px; }
-.enemy { border: 2px solid var(--brick); padding: 10px 12px; margin: 8px 0; max-width: 420px; background: #241a16; }
-.enemy .ename { color: #ff9aa5; font-size: 20px; font-weight: 800; }
-.actor-panel { margin: 10px 0; }
-.actor-name { font-size: 18px; font-weight: 700; color: var(--bone); }
-.actor-skills { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
-.actor-skills span { border: 2px solid var(--panel-line); padding: 3px 8px; font-size: 14px; }
-.roll-line { font-size: 17px; margin: 8px 0; }
-.roll-line .big { font-size: 24px; }
-.roll-success { color: var(--moss); font-weight: 800; }
-.roll-fail { color: var(--brick); font-weight: 800; }
-.roll-crit { color: var(--gold); font-weight: 900; }
-.sayit { border: 2px solid var(--gold); background: #2a2218; padding: 10px 14px; margin: 8px 0; font-size: 20px; color: var(--bone); }
-.sayit .prompt { font-weight: 700; }
-.roster { display: flex; gap: 10px; padding: 10px 16px; background: var(--bg2); border-bottom: 2px solid var(--panel-line); overflow-x: auto; }
-.roster-card { min-width: 130px; border: 2px solid var(--panel-line); background: var(--panel); padding: 8px; }
-.roster-card.acting { border-color: var(--gold); }
-.roster-card.dazed { opacity: 0.4; }
-.roster-name { font-weight: 700; font-size: 15px; }
-.roster-class { font-size: 12px; color: var(--bone-dim); }
-.log { width: 300px; flex: 0 0 auto; border-left: 2px solid var(--panel-line); background: var(--bg2); padding: 10px; overflow-y: auto; }
-.log-title { color: var(--gold); font-weight: 800; margin-bottom: 6px; }
-.log-list { list-style: none; margin: 0; padding: 0; }
-.log-entry { font-size: 13px; color: var(--bone-dim); padding: 3px 0; border-bottom: 1px solid #3a332a; }
-.log-combat { color: #ffb3c1; }
-.log-room { color: var(--gold); }
-.log-language { color: var(--teal); }
-.log-narrate { color: var(--bone); font-style: italic; }
-.log-rest { color: var(--moss); }
-.log-treasure { color: var(--gold); }
+.stage canvas { image-rendering: pixelated; }
 
-/* ============ single-window drawer ============ */
-.drawer-open {
+/* Stage text: no body text under ~28px at 1080p (scale via --ss). */
+.stage { font-size: calc(28px * var(--ss)); }
+.stage .muted { font-size: calc(28px * var(--ss)); }
+.stage .battle-menu { font-size: calc(30px * var(--ss)); }
+
+/* ============ title screen ============ */
+.title-screen {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center; padding: calc(16px * var(--ss));
+  z-index: 1;
+}
+.title-hills {
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+  pointer-events: none; image-rendering: pixelated; z-index: 0;
+}
+.title-content { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; }
+.title-logo {
+  font-family: var(--font-head); color: var(--gold);
+  font-size: calc(56px * var(--ss)); line-height: 1.2; margin: 0 0 calc(8px * var(--ss));
+  text-shadow: 3px 3px 0 #000; max-width: 100%; overflow-wrap: break-word;
+}
+.title-sub { font-family: var(--font-body); color: var(--bone-dim); font-size: calc(30px * var(--ss)); margin: 0 0 calc(24px * var(--ss)); }
+.title-menu { position: relative; z-index: 1; display: flex; flex-direction: column; gap: calc(14px * var(--ss)); min-width: 0; width: 60%; }
+.title-menu .title-state { font-family: var(--font-body); font-size: calc(30px * var(--ss)); }
+.title-menu button {
+  font-family: var(--font-body); font-size: calc(34px * var(--ss)); padding: calc(10px * var(--ss));
+  text-align: center; border: 2px solid var(--bone-frame); background: var(--panel); color: var(--bone);
+}
+.title-menu button:hover, .title-menu button:focus-visible { border-color: var(--gold); color: var(--gold); }
+.title-hint {
+  position: absolute; bottom: calc(14px * var(--ss)); left: 50%; transform: translateX(-50%);
+  z-index: 2; font-family: var(--font-body); font-size: calc(30px * var(--ss)); color: var(--gold);
+  background: var(--bg2); border: 2px solid var(--panel-line); padding: calc(6px * var(--ss)) calc(14px * var(--ss));
+  white-space: nowrap;
+}
+
+/* ============ single-window drawer (docks beside Stage) ============ */
+.single-window { display: flex; flex-direction: row; height: 100vh; overflow: hidden; }
+.single-window #stage.single-stage {
+  flex: 1 1 auto; width: auto; height: 100vh;
+  display: flex; align-items: center; justify-content: center; min-width: 0;
+}
+.single-window #stage.single-stage .stage {
+  width: min(100%, calc(100vh * 16 / 9));
+}
+.single-window #gm-drawer {
+  position: relative; width: 30%; min-width: 320px; max-width: 40vw;
+  height: 100vh; border-left: 3px solid var(--gold); background: var(--bg);
+  display: flex; flex-direction: column; flex: 0 0 auto;
+  transform: none;
+}
+.single-window #gm-drawer:not(.open) { display: none; }
+.single-window .drawer-body { flex: 1; overflow-y: auto; }
+.single-window .drawer-body .gm { max-width: none; padding: 12px; }
+.single-window #gm-drawer-open {
   position: fixed; right: 14px; bottom: 14px; z-index: 40;
   width: 56px; height: 56px; border-radius: 0; font-weight: 800;
   border: 2px solid var(--gold); color: var(--gold); background: var(--panel);
 }
-.drawer {
-  position: fixed; top: 0; right: 0; bottom: 0; width: min(720px, 94vw);
-  z-index: 30; background: var(--bg); border-left: 3px solid var(--gold);
-  transform: translateX(105%); transition: transform 0.2s ease;
-  display: flex; flex-direction: column;
-}
-.drawer.open { transform: translateX(0); }
-.drawer-head {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 10px 14px; border-bottom: 2px solid var(--panel-line); background: var(--bg2);
-}
-.drawer-body { flex: 1; overflow-y: auto; }
-.drawer-body .gm { max-width: none; }
+.single-window #gm-drawer.open ~ #gm-drawer-open { display: none; }
+.single-window .drawer-head { padding: 8px 12px; }
 
 /* ============ start overlay ============ */
 .start-overlay {
@@ -174,11 +181,6 @@ h1, h2, h3 { color: var(--gold); font-weight: 700; }
 .start-overlay.show { display: flex; }
 .start-box { text-align: center; max-width: 420px; }
 .start-box h1 { color: var(--gold); font-size: 30px; }
-
-@media (max-width: 900px) {
-  .stage-main { flex-direction: column; }
-  .log { width: auto; border-left: none; border-top: 2px solid var(--panel-line); max-height: 180px; }
-}
 
 /* ============ B1: pixel fonts ============ */
 @font-face {
@@ -192,65 +194,71 @@ h1, h2, h3 { color: var(--gold); font-weight: 700; }
   font-display: swap;
 }
 :root { --font-head: "Press Start 2P", monospace; --font-body: "VT323", "Segoe UI", monospace; }
-h1, h2, h3, .app-title, .big-title, .room-name, .ename, .actor-name, .prompt, .gm-hint { font-family: var(--font-head); }
+/* Pixel font is for the logo/titles ONLY; headings and panel text use VT323. */
+.title-logo, .app-title, .big-title { font-family: var(--font-head); }
+h1, h2, h3, .room-name, .ename, .actor-name, .prompt, .gm-hint { font-family: var(--font-body); font-weight: 700; }
 body, button, input, select, textarea, .window, .muted, .log-entry { font-family: var(--font-body); }
-
-/* ============ B1: title screen ============ */
-.title-screen {
-  min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center;
-  position: relative; overflow: hidden; text-align: center; padding: 24px;
-}
-.title-hills {
-  position: absolute; left: 0; right: 0; bottom: 0; height: 40vh; pointer-events: none;
-  image-rendering: pixelated;
-}
-.title-logo { font-family: var(--font-head); color: var(--gold); font-size: clamp(28px, 6vw, 64px); line-height: 1.2; text-shadow: 3px 3px 0 #000; margin: 0 0 8px; }
-.title-sub { font-family: var(--font-body); color: var(--bone-dim); font-size: 22px; margin: 0 0 28px; }
-.title-menu { display: flex; flex-direction: column; gap: 14px; min-width: 260px; }
-.title-menu button {
-  font-family: var(--font-head); font-size: 16px; padding: 12px; text-align: center;
-  border: 2px solid var(--bone-frame); background: var(--panel); color: var(--bone);
-}
-.title-menu button:hover, .title-menu button:focus-visible { border-color: var(--gold); color: var(--gold); }
-.title-menu .muted { font-size: 18px; }
 
 /* ============ B1: JRPG battle layout ============ */
 .battle {
-  min-height: 100vh; display: flex; flex-direction: column; position: relative; overflow: hidden;
+  position: absolute; inset: 0; display: flex; flex-direction: column; overflow: hidden;
 }
 .battle-field {
   flex: 1; position: relative; min-height: 0; image-rendering: pixelated;
   background:
     linear-gradient(#241f19, #1b1713);
 }
-.battle-enemies { position: absolute; top: 8%; right: 6%; display: flex; gap: 24px; align-items: flex-end; }
+.battle-enemies { position: absolute; top: 6%; right: 4%; display: flex; gap: calc(24px * var(--ss)); align-items: flex-end; }
 .battle-enemies .enemy-slot { display: flex; flex-direction: column; align-items: center; gap: 4px; }
 .battle-enemies .enemy-slot canvas, .battle-field canvas { image-rendering: pixelated; }
-.battle-party { position: absolute; bottom: 26%; left: 5%; display: flex; gap: 20px; align-items: flex-end; }
+.battle-party { position: absolute; bottom: 24%; left: 3%; display: flex; gap: calc(16px * var(--ss)); align-items: flex-end; }
 .battle-party .party-slot { display: flex; flex-direction: column; align-items: center; gap: 2px; position: relative; }
-.battle-party .party-slot .pname-tag { font-family: var(--font-head); font-size: 10px; color: var(--bone); background: #0008; padding: 2px 4px; }
+.battle-party .party-slot .pname-tag { font-family: var(--font-body); font-size: calc(26px * var(--ss)); color: var(--bone); background: #0008; padding: 2px 6px; white-space: nowrap; }
+.bar { height: calc(20px * var(--ss)); }
+.bar-label { font-size: calc(20px * var(--ss)); line-height: calc(16px * var(--ss)); }
+
+/* minimap placeholder: top-right, expedition room nodes */
+.stage-map {
+  position: absolute; top: 2.5%; right: 2.5%; z-index: 3;
+  display: flex; flex-direction: column; align-items: flex-start; gap: 6px;
+  background: var(--panel); border: 2px solid var(--bone-frame); outline: 2px solid var(--panel-line); outline-offset: -4px;
+  padding: calc(8px * var(--ss)) calc(12px * var(--ss));
+}
+.map-title { font-family: var(--font-body); font-size: calc(28px * var(--ss)); color: var(--gold); }
+.map-nodes { display: flex; flex-wrap: wrap; gap: calc(8px * var(--ss)); }
+.map-node {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: calc(40px * var(--ss)); height: calc(40px * var(--ss));
+  border: 2px solid var(--panel-line); color: var(--bone-dim); font-family: var(--font-body);
+  font-size: calc(26px * var(--ss));
+}
+.map-node.current { border-color: var(--gold); color: var(--gold); }
+.map-node.boss { border-color: var(--brick); color: #ff9aa5; }
+
 .damage-number {
-  position: absolute; font-family: var(--font-head); color: var(--ember); font-size: 22px; z-index: 5;
+  position: absolute; font-family: var(--font-head); color: var(--ember); font-size: calc(40px * var(--ss)); z-index: 5;
   animation: dmgpop 0.7s steps(4) forwards; text-shadow: 2px 2px 0 #000; pointer-events: none;
 }
 @keyframes dmgpop { 0% { opacity: 0; transform: translateY(8px); } 30% { opacity: 1; } 100% { opacity: 0; transform: translateY(-18px); } }
 .battle-menu {
-  border-top: 3px solid var(--gold); background: var(--panel); padding: 10px 16px;
-  display: flex; flex-wrap: wrap; gap: 10px; align-items: center; min-height: 76px;
+  border-top: 3px solid var(--gold); background: var(--panel);
+  padding: calc(10px * var(--ss)) calc(16px * var(--ss));
+  display: flex; flex-wrap: wrap; gap: calc(10px * var(--ss)); align-items: center;
+  min-height: calc(90px * var(--ss));
 }
 .battle-menu .cmd {
-  font-family: var(--font-head); font-size: 14px; padding: 10px 14px; min-width: 150px; text-align: left;
-  border: 2px solid var(--bone-frame); background: #1b1713; color: var(--bone);
+  font-family: var(--font-body); font-size: calc(30px * var(--ss)); padding: calc(8px * var(--ss)) calc(14px * var(--ss)); min-width: 0;
+  text-align: left; border: 2px solid var(--bone-frame); background: #1b1713; color: var(--bone);
 }
 .battle-menu .cmd:hover, .battle-menu .cmd:focus-visible { border-color: var(--gold); color: var(--gold); }
 .battle-menu .cmd:disabled { opacity: 0.4; cursor: not-allowed; }
-.battle-menu .cmd-label { font-family: var(--font-head); color: var(--bone-dim); font-size: 11px; margin-right: 4px; }
+.battle-menu .cmd-label { font-family: var(--font-body); color: var(--bone-dim); font-size: calc(30px * var(--ss)); margin-right: calc(4px * var(--ss)); }
 .d20-stage {
-  display: inline-flex; align-items: center; gap: 10px; margin: 8px 0;
+  display: inline-flex; align-items: center; gap: calc(10px * var(--ss)); margin: calc(6px * var(--ss)) 0;
 }
 .d20-face {
-  width: 56px; height: 56px; image-rendering: pixelated; background: var(--bone);
-  color: #000; font-family: var(--font-head); font-size: 26px; font-weight: 900;
+  width: calc(64px * var(--ss)); height: calc(64px * var(--ss)); image-rendering: pixelated; background: var(--bone);
+  color: #000; font-family: var(--font-head); font-size: calc(28px * var(--ss)); font-weight: 900;
   display: flex; align-items: center; justify-content: center;
   border: 3px solid var(--ember); outline: 2px solid #000; outline-offset: -3px;
 }
@@ -271,10 +279,7 @@ body, button, input, select, textarea, .window, .muted, .log-entry { font-family
   .damage-number { animation: none !important; transform: none !important; opacity: 1 !important; }
 }
 
-/* single-window battle uses #stage .battle */
-.single-stage .battle { min-height: 100vh; }
-
 /* B1: acting party slot highlight */
 .battle-party .party-slot.acting { outline: 2px solid var(--gold); outline-offset: 2px; }
 .party-slot { image-rendering: pixelated; }
-.typewriter-wrap { position: absolute; left: 16px; right: 16px; top: 12%; font-family: var(--font-body); font-size: 20px; color: var(--bone); background: #0008; padding: 8px 12px; border: 2px solid var(--panel-line); }
+.typewriter-wrap { position: absolute; left: 2%; right: 2%; top: 2%; font-family: var(--font-body); font-size: calc(28px * var(--ss)); color: var(--bone); background: #0008; padding: calc(6px * var(--ss)) calc(10px * var(--ss)); border: 2px solid var(--panel-line); z-index: 2; }
