@@ -1,60 +1,24 @@
-// Stage view (v2): what students see on the projector. Read-only, no spoilers,
-// no teacher-only info (language hints stay in the GM console).
+// Stage view (v2 + B1): JRPG battle layout, title screen, sprites, d20, typewriter.
+// Read-only, no spoilers, no teacher-only info (language hints stay in GM console).
 import { getState, subscribe } from "../engine/state.js";
 import { getContent } from "../engine/content.js";
+import { loadSprites, mountSprite } from "../engine/sprites.js";
+import * as audio from "../engine/audio.js";
 import { el, bar } from "./util.js";
+import { typewriterText } from "./typewriter.js";
 
-export function mountStage(container) {
-  const root = el("div", { class: "stage" });
-  container.appendChild(root);
+let rootEl = null;
+const REDUCED = typeof window !== "undefined" && window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+export async function mountStage(container) {
+  rootEl = el("div", { class: "stage" });
+  container.appendChild(rootEl);
+  try {
+    await loadSprites();
+  } catch (e) { /* sprites optional */ }
+  audio.initAudio();
   render();
   subscribe(() => render());
-
-  function render() {
-    const state = getState();
-    root.innerHTML = "";
-    const mainRow = el("div", { class: "stage-main" });
-    mainRow.appendChild(renderMain(state));
-    const log = renderLog(state);
-    if (log) mainRow.appendChild(log);
-    root.appendChild(renderHeader(state));
-    root.appendChild(renderRoster(state));
-    root.appendChild(mainRow);
-  }
-}
-
-function renderHeader(s) {
-  const left = el("div", { class: "app-title" }, "Classroom RPG");
-  const right = el("div", { class: "header-stats" });
-  if (s.phase === "expedition") {
-    const exp = s.expedition;
-    right.appendChild(el("span", { class: "badge" }, `Room ${exp.current + 1}/${exp.rooms.length}`));
-    right.appendChild(el("span", { class: "badge" }, exp.deckName));
-  }
-  if (s.party && (s.party.score > 0 || s.party.gold > 0)) {
-    right.appendChild(el("span", { class: "badge" }, `Score ${s.party.score}`));
-    right.appendChild(el("span", { class: "badge" }, `Gold ${s.party.gold}`));
-  }
-  return el("header", { class: "stage-header" }, [left, right]);
-}
-
-function renderRoster(s) {
-  const wrap = el("div", { class: "roster" });
-  if (s.players.length === 0) {
-    wrap.appendChild(el("div", { class: "muted" }, "No players yet."));
-    return wrap;
-  }
-  for (const p of s.players) {
-    const card = el("div", { class: "roster-card" });
-    card.appendChild(el("div", { class: "roster-name" }, `${p.name}${p.npc ? " (NPC)" : ""}`));
-    card.appendChild(el("div", { class: "roster-class" }, p.classId ? className(p.classId) : "no class"));
-    card.appendChild(bar(p.hp, p.maxHp, "hp"));
-    card.appendChild(bar(p.focus, p.maxFocus, "focus"));
-    card.classList.toggle("acting", s.phase === "expedition" && s.expedition && s.expedition.activePlayerId === p.id && s.expedition.actionPhase === "choosing");
-    card.classList.toggle("dazed", p.hp === 0);
-    wrap.appendChild(card);
-  }
-  return wrap;
 }
 
 function className(id) {
@@ -62,91 +26,154 @@ function className(id) {
   return c ? c.name : "?";
 }
 
-function renderMain(s) {
-  if (s.phase === "lobby") {
-    return el("section", { class: "big" },
-      el("div", { class: "big-title" }, "The Adventure Awaits"),
-      el("div", { class: "big-sub" }, `${s.players.length} hero(es) ready. Teacher: press G to open the GM console.`),
-    );
-  }
-  if (s.phase === "victory" || s.phase === "defeated") {
-    const won = s.phase === "victory";
-    return el("section", { class: "big" },
-      el("div", { class: "big-title " + (won ? "win" : "lose") }, won ? "Expedition Complete!" : "Expedition Over"),
-      el("div", { class: "big-sub" }, won
-        ? `The whole class wins! Score ${s.party.score} | Gold ${s.party.gold}`
-        : `The party lives to try again. Score ${s.party.score} | Gold ${s.party.gold}`),
-    );
-  }
-  return renderRoom(s);
+function render() {
+  const state = getState();
+  if (!rootEl) return;
+  rootEl.innerHTML = "";
+  if (state.phase === "lobby") { rootEl.appendChild(renderTitle(state)); return; }
+  if (state.phase === "victory" || state.phase === "defeated") { rootEl.appendChild(renderRecap(state)); return; }
+  rootEl.appendChild(renderBattle(state));
 }
 
-function renderRoom(s) {
+// ---------- Title screen ----------
+function renderTitle(s) {
+  const wrap = el("div", { class: "title-screen" });
+  const hills = el("canvas", { class: "title-hills" });
+  hills.width = 320; hills.height = 100;
+  const ctx = hills.getContext("2d");
+  ctx.fillStyle = "#2a241d"; ctx.fillRect(0, 0, 320, 100);
+  ctx.fillStyle = "#1b1713";
+  for (let x = 0; x < 320; x += 8) { const y = 40 + ((x * 7) % 40); ctx.fillRect(x, y, 6, 100 - y); }
+  ctx.fillStyle = "#3a5a2a";
+  for (let x = 0; x < 320; x += 12) { const y = 62 + ((x * 5) % 24); ctx.fillRect(x, y, 8, 100 - y); }
+  ctx.fillStyle = "#6a994e";
+  for (let x = 4; x < 320; x += 16) { ctx.fillRect(x, 78 + ((x * 3) % 12), 6, 22); }
+  wrap.appendChild(hills);
+
+  const logo = el("h1", { class: "title-logo" }, "CLASSROOM RPG");
+  wrap.appendChild(logo);
+  wrap.appendChild(el("div", { class: "title-sub" }, "A tabletop adventure for your English class"));
+
+  const menu = el("div", { class: "title-menu" });
+  const hasSave = s.players.length > 0 || !!s.expedition;
+  menu.appendChild(el("div", { class: (hasSave ? "title-state" : "title-state empty") }, hasSave ? "A saved game is waiting on the teacher console." : "No players yet."));
+  menu.appendChild(el("div", { class: "muted" }, "Teacher: press G to open the GM console"));
+  wrap.appendChild(menu);
+
+  return wrap;
+}
+
+// ---------- Battle layout ----------
+function renderBattle(s) {
   const exp = s.expedition;
   const room = exp.rooms[exp.current];
-  const section = el("section", { class: "room-pane" });
-  section.appendChild(el("div", { class: "room-name" }, room.flavour));
+  const battle = el("div", { class: "battle" });
 
+  const field = el("div", { class: "battle-field" });
+
+  // enemies on the right
   if (exp.monster) {
-    const en = el("div", { class: "enemy" });
-    en.appendChild(el("div", { class: "ename" }, exp.monster.name));
-    en.appendChild(bar(exp.monster.hp, exp.monster.maxHp, "hp"));
-    if (exp.monster.quirk) en.appendChild(el("div", { class: "muted" }, `Quirk: ${exp.monster.quirk}`));
-    section.appendChild(en);
+    const en = el("div", { class: "battle-enemies" });
+    const slot = el("div", { class: "enemy-slot" });
+    const key = exp.monster.id || "grumble-slime";
+    const frame = exp.monster.hp === 0 ? "down" : "idle-1";
+    mountSprite(slot, key, frame, exp.monster.boss ? 2 : 1.6);
+    slot.appendChild(el("div", { class: "pname-tag" }, exp.monster.name));
+    slot.appendChild(bar(exp.monster.hp, exp.monster.maxHp, "hp"));
+    en.appendChild(slot);
+    field.appendChild(en);
   }
 
+  // party on the left
+  const party = el("div", { class: "battle-party" });
+  for (const p of s.players) {
+    const slot = el("div", { class: "party-slot" });
+    mountSprite(slot, p.classId || "warrior", p.hp === 0 ? "down" : "idle-1", 1.2);
+    slot.appendChild(el("div", { class: "pname-tag" }, `${p.name}${p.npc ? " (NPC)" : ""}`));
+    slot.appendChild(bar(p.hp, p.maxHp, "hp"));
+    slot.appendChild(bar(p.focus, p.maxFocus, "focus"));
+    if (exp.activePlayerId === p.id) slot.classList.add("acting");
+    party.appendChild(slot);
+  }
+  field.appendChild(party);
+  battle.appendChild(field);
+
+  // bottom menu window
+  const menu = el("div", { class: "battle-menu" });
   const actor = s.players.find((p) => p.id === exp.activePlayerId);
-  if (actor && !actor.npc && (exp.roomStatus === "combat" || exp.roomStatus === "challenge" || exp.roomStatus === "trap") && exp.actionPhase === "choosing") {
-    const ap = el("div", { class: "actor-panel" });
-    ap.appendChild(el("div", { class: "actor-name" }, `${actor.name} (${className(actor.classId)}) — your turn!`));
+  const acting = !!actor && !actor.npc && (exp.roomStatus === "combat" || exp.roomStatus === "challenge" || exp.roomStatus === "trap") && exp.actionPhase === "choosing";
+
+  if (exp.langPrompt) {
+    menu.appendChild(el("span", { class: "cmd-label" }, "Say it:"));
+    const say = el("span", { class: "prompt" }, exp.langPrompt.text);
+    menu.appendChild(say);
+  } else if (acting && actor) {
+    menu.appendChild(el("span", { class: "cmd-label" }, `${actor.name} (${className(actor.classId)}) — your turn:`));
     const cls = getContent().classes.find((c) => c.id === actor.classId);
-    const skills = el("div", { class: "actor-skills" });
-    skills.appendChild(el("span", {}, "Basic attack (free)"));
+    const basic = el("button", { class: "cmd" }, `Basic attack (free)`);
+    basic.addEventListener("click", () => audio.playSfx("click"));
+    menu.appendChild(basic);
     for (const sid of cls.skillIds) {
       const sk = getContent().skills.find((x) => x.id === sid);
-      skills.appendChild(el("span", {}, `${sk.name} (${sk.cost} Focus)`));
+      const btn = el("button", { class: "cmd", disabled: actor.focus < sk.cost ? "" : null }, `${sk.name} (${sk.cost} F)`);
+      btn.addEventListener("click", () => audio.playSfx("click"));
+      menu.appendChild(btn);
     }
-    ap.appendChild(skills);
-    section.appendChild(ap);
+  } else if (exp.roomStatus === "cleared") {
+    menu.appendChild(el("span", { class: "muted" }, "Room cleared — wait for the teacher."));
+  } else if (exp.roomStatus === "defeat") {
+    menu.appendChild(el("span", { class: "roll-fail" }, "The party is overwhelmed..."));
+  } else {
+    menu.appendChild(el("span", { class: "muted" }, room.flavour));
   }
 
-  if (exp.actionPhase === "acting" && exp.langPrompt) {
-    const say = el("div", { class: "sayit" });
-    say.appendChild(el("div", { class: "prompt" }, `Say it: ${exp.langPrompt.text}`));
-    section.appendChild(say);
-  }
-
+  // d20 + roll breakdown
   if (exp.lastRoll) {
     const r = exp.lastRoll;
+    const rollWrap = el("div", { class: "d20-stage" });
+    const face = el("div", { class: "d20-face" + (r.crit ? " d20-crit" : "") }, String(r.d20));
+    if (!REDUCED) { face.classList.add("d20-rolling"); setTimeout(() => face.classList.remove("d20-rolling"), 700); }
+    if (r.crit) audio.playSfx("crit");
+    else if (r.fumble) audio.playSfx("fumble");
+    else if (r.success) audio.playSfx("hit");
+    rollWrap.appendChild(face);
     const res = r.crit ? "CRIT!" : r.fumble ? "FUMBLE!" : r.success ? "success" : "fail";
-    section.appendChild(el("div", { class: "roll-line" },
+    const line = el("div", { class: "roll-line" },
       el("span", { class: "big" }, `d20 ${r.d20}`),
       el("span", {}, ` + mod ${r.mod}`),
       el("span", {}, r.langBonus ? ` + language ${r.langBonus}` : ""),
       el("span", {}, r.assistBonus ? ` + assist ${r.assistBonus}` : ""),
       el("span", {}, ` = ${r.total} vs ${r.difficulty}`),
       el("span", { class: r.crit ? "roll-crit" : r.success ? "roll-success" : "roll-fail" }, ` → ${res}`),
-    ));
+    );
+    rollWrap.appendChild(line);
+    menu.appendChild(rollWrap);
   }
 
-  const st = exp.roomStatus;
-  if (st === "cleared") section.appendChild(el("div", { class: "muted" }, "Room cleared — wait for the teacher."));
-  else if (st === "defeat") section.appendChild(el("div", { class: "roll-fail" }, "The party is overwhelmed..."));
-  else if (st === "challenge") section.appendChild(el("div", { class: "muted" }, "A challenge! Whoever rolls leads the way."));
-  else if (st === "trap") section.appendChild(el("div", { class: "muted" }, "Watch your step — a trap!"));
+  battle.appendChild(menu);
 
-  return section;
+  // narration via typewriter
+  const log = exp.log;
+  if (log.length) {
+    const last = log[log.length - 1];
+    if (last && last.text) {
+      const tw = el("div", { class: "typewriter-wrap" });
+      tw.appendChild(typewriterText(last.text, { speed: 18 }));
+      battle.appendChild(tw);
+    }
+  }
+
+  return battle;
 }
 
-function renderLog(s) {
-  if (!s.expedition) return null;
-  const feed = el("aside", { class: "log" });
-  feed.appendChild(el("div", { class: "log-title" }, "Adventure Log"));
-  const ul = el("ul", { class: "log-list" });
-  for (const entry of s.expedition.log) {
-    const li = el("li", { class: `log-entry log-${entry.kind}` }, entry.text);
-    ul.appendChild(li);
-  }
-  feed.appendChild(ul);
-  return feed;
+// ---------- Recap ----------
+function renderRecap(s) {
+  const won = s.phase === "victory";
+  const wrap = el("div", { class: "title-screen" });
+  wrap.appendChild(el("h1", { class: "title-logo " + (won ? "win" : "lose") }, won ? "EXPEDITION COMPLETE!" : "EXPEDITION OVER"));
+  wrap.appendChild(el("div", { class: "title-sub" }, won
+    ? `The whole class wins! Score ${s.party.score} | Gold ${s.party.gold}`
+    : `The party lives to try again. Score ${s.party.score} | Gold ${s.party.gold}`));
+  if (won) audio.playSfx("victory");
+  return wrap;
 }

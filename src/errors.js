@@ -11,7 +11,9 @@
       "<p>You opened this file directly from your computer. The game needs a tiny local server to run.</p>" +
       "<p><b>Do this instead:</b> double-click <code style='color:#ff8b2a'>start.bat</code> (next to this folder's files), then open <code style='color:#ff8b2a'>http://localhost:8000/</code> in your browser.</p>";
     div.appendChild(box);
-    document.body.appendChild(div);
+    const mount = () => document.body.appendChild(div);
+    if (document.body) mount();
+    else document.addEventListener("DOMContentLoaded", mount, { once: true });
     return;
   }
   let banner = null;

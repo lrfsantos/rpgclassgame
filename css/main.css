@@ -179,3 +179,102 @@ h1, h2, h3 { color: var(--gold); font-weight: 700; }
   .stage-main { flex-direction: column; }
   .log { width: auto; border-left: none; border-top: 2px solid var(--panel-line); max-height: 180px; }
 }
+
+/* ============ B1: pixel fonts ============ */
+@font-face {
+  font-family: "Press Start 2P";
+  src: url("../assets/fonts/PressStart2P-Regular.ttf") format("truetype");
+  font-display: swap;
+}
+@font-face {
+  font-family: "VT323";
+  src: url("../assets/fonts/VT323-Regular.ttf") format("truetype");
+  font-display: swap;
+}
+:root { --font-head: "Press Start 2P", monospace; --font-body: "VT323", "Segoe UI", monospace; }
+h1, h2, h3, .app-title, .big-title, .room-name, .ename, .actor-name, .prompt, .gm-hint { font-family: var(--font-head); }
+body, button, input, select, textarea, .window, .muted, .log-entry { font-family: var(--font-body); }
+
+/* ============ B1: title screen ============ */
+.title-screen {
+  min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  position: relative; overflow: hidden; text-align: center; padding: 24px;
+}
+.title-hills {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 40vh; pointer-events: none;
+  image-rendering: pixelated;
+}
+.title-logo { font-family: var(--font-head); color: var(--gold); font-size: clamp(28px, 6vw, 64px); line-height: 1.2; text-shadow: 3px 3px 0 #000; margin: 0 0 8px; }
+.title-sub { font-family: var(--font-body); color: var(--bone-dim); font-size: 22px; margin: 0 0 28px; }
+.title-menu { display: flex; flex-direction: column; gap: 14px; min-width: 260px; }
+.title-menu button {
+  font-family: var(--font-head); font-size: 16px; padding: 12px; text-align: center;
+  border: 2px solid var(--bone-frame); background: var(--panel); color: var(--bone);
+}
+.title-menu button:hover, .title-menu button:focus-visible { border-color: var(--gold); color: var(--gold); }
+.title-menu .muted { font-size: 18px; }
+
+/* ============ B1: JRPG battle layout ============ */
+.battle {
+  min-height: 100vh; display: flex; flex-direction: column; position: relative; overflow: hidden;
+}
+.battle-field {
+  flex: 1; position: relative; min-height: 0; image-rendering: pixelated;
+  background:
+    linear-gradient(#241f19, #1b1713);
+}
+.battle-enemies { position: absolute; top: 8%; right: 6%; display: flex; gap: 24px; align-items: flex-end; }
+.battle-enemies .enemy-slot { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.battle-enemies .enemy-slot canvas, .battle-field canvas { image-rendering: pixelated; }
+.battle-party { position: absolute; bottom: 26%; left: 5%; display: flex; gap: 20px; align-items: flex-end; }
+.battle-party .party-slot { display: flex; flex-direction: column; align-items: center; gap: 2px; position: relative; }
+.battle-party .party-slot .pname-tag { font-family: var(--font-head); font-size: 10px; color: var(--bone); background: #0008; padding: 2px 4px; }
+.damage-number {
+  position: absolute; font-family: var(--font-head); color: var(--ember); font-size: 22px; z-index: 5;
+  animation: dmgpop 0.7s steps(4) forwards; text-shadow: 2px 2px 0 #000; pointer-events: none;
+}
+@keyframes dmgpop { 0% { opacity: 0; transform: translateY(8px); } 30% { opacity: 1; } 100% { opacity: 0; transform: translateY(-18px); } }
+.battle-menu {
+  border-top: 3px solid var(--gold); background: var(--panel); padding: 10px 16px;
+  display: flex; flex-wrap: wrap; gap: 10px; align-items: center; min-height: 76px;
+}
+.battle-menu .cmd {
+  font-family: var(--font-head); font-size: 14px; padding: 10px 14px; min-width: 150px; text-align: left;
+  border: 2px solid var(--bone-frame); background: #1b1713; color: var(--bone);
+}
+.battle-menu .cmd:hover, .battle-menu .cmd:focus-visible { border-color: var(--gold); color: var(--gold); }
+.battle-menu .cmd:disabled { opacity: 0.4; cursor: not-allowed; }
+.battle-menu .cmd-label { font-family: var(--font-head); color: var(--bone-dim); font-size: 11px; margin-right: 4px; }
+.d20-stage {
+  display: inline-flex; align-items: center; gap: 10px; margin: 8px 0;
+}
+.d20-face {
+  width: 56px; height: 56px; image-rendering: pixelated; background: var(--bone);
+  color: #000; font-family: var(--font-head); font-size: 26px; font-weight: 900;
+  display: flex; align-items: center; justify-content: center;
+  border: 3px solid var(--ember); outline: 2px solid #000; outline-offset: -3px;
+}
+.d20-rolling { animation: d20tumble 0.6s steps(8) infinite; }
+@keyframes d20tumble { 0% { transform: rotate(0deg) scale(1); } 50% { transform: rotate(180deg) scale(1.3); } 100% { transform: rotate(360deg) scale(1); } }
+.d20-crit { animation: d20crit 0.5s steps(6) 2; border-color: var(--gold); }
+@keyframes d20crit { 0% { filter: brightness(1); } 50% { filter: brightness(2.2); } 100% { filter: brightness(1); } }
+.hit-flash { animation: hitflash 0.35s steps(3) 1; }
+@keyframes hitflash { 0% { filter: brightness(1); } 50% { filter: brightness(2.6) sepia(1); } 100% { filter: brightness(1); } }
+.screen-shake { animation: shake 0.3s steps(3) 1; }
+@keyframes shake { 0% { transform: translate(0,0); } 25% { transform: translate(-6px,2px); } 50% { transform: translate(6px,-2px); } 75% { transform: translate(-3px,1px); } 100% { transform: translate(0,0); } }
+.typewriter { white-space: pre-wrap; }
+.typewriter-caret::after { content: "▌"; color: var(--gold); animation: blink 0.8s steps(2) infinite; }
+@keyframes blink { 0% { opacity: 1; } 50% { opacity: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .d20-rolling, .d20-crit, .hit-flash, .screen-shake, .title-hills, .typewriter-caret::after { animation: none !important; }
+  .damage-number { animation: none !important; transform: none !important; opacity: 1 !important; }
+}
+
+/* single-window battle uses #stage .battle */
+.single-stage .battle { min-height: 100vh; }
+
+/* B1: acting party slot highlight */
+.battle-party .party-slot.acting { outline: 2px solid var(--gold); outline-offset: 2px; }
+.party-slot { image-rendering: pixelated; }
+.typewriter-wrap { position: absolute; left: 16px; right: 16px; top: 12%; font-family: var(--font-body); font-size: 20px; color: var(--bone); background: #0008; padding: 8px 12px; border: 2px solid var(--panel-line); }

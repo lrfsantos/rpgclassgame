@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "frameRate": 6,
+  "spriteSize": {
+    "party": { "width": 32, "height": 48 },
+    "enemy": { "width": 64, "height": 64 },
+    "boss": { "width": 128, "height": 128 },
+    "portrait": { "width": 64, "height": 64 }
+  },
+  "frames": ["idle-1", "idle-2", "attack", "hurt", "down", "victory"],
+  "characters": {
+    "warrior": { "sprite": "characters/warrior.png", "portrait": "portraits/warrior.png", "frameWidth": 32, "frameHeight": 48, "frames": ["idle-1", "idle-2", "attack", "hurt", "down", "victory"] },
+    "thief": { "sprite": "characters/thief.png", "portrait": "portraits/thief.png", "frameWidth": 32, "frameHeight": 48, "frames": ["idle-1", "idle-2", "attack", "hurt", "down", "victory"] },
+    "mage": { "sprite": "characters/mage.png", "portrait": "portraits/mage.png", "frameWidth": 32, "frameHeight": 48, "frames": ["idle-1", "idle-2", "attack", "hurt", "down", "victory"] },
+    "cleric": { "sprite": "characters/cleric.png", "portrait": "portraits/cleric.png", "frameWidth": 32, "frameHeight": 48, "frames": ["idle-1", "idle-2", "attack", "hurt", "down", "victory"] },
+    "ranger": { "sprite": "characters/ranger.png", "portrait": "portraits/ranger.png", "frameWidth": 32, "frameHeight": 48, "frames": ["idle-1", "idle-2", "attack", "hurt", "down", "victory"] },
+    "bard": { "sprite": "characters/bard.png", "portrait": "portraits/bard.png", "frameWidth": 32, "frameHeight": 48, "frames": ["idle-1", "idle-2", "attack", "hurt", "down", "victory"] }
+  },
+  "monsters": {
+    "grumble-slime": { "sprite": "monsters/grumble-slime.png", "frameWidth": 64, "frameHeight": 64, "boss": false, "frames": ["idle-1", "idle-2", "attack", "hurt", "down", "victory"] },
+    "charlotte-viii": { "sprite": "monsters/charlotte-viii.png", "frameWidth": 64, "frameHeight": 64, "boss": false, "frames": ["idle-1", "idle-2", "attack", "hurt", "down", "victory"] },
+    "mossbeard": { "sprite": "monsters/mossbeard.png", "frameWidth": 64, "frameHeight": 64, "boss": false, "frames": ["idle-1", "idle-2", "attack", "hurt", "down", "victory"] },
+    "bone-rattler": { "sprite": "monsters/bone-rattler.png", "frameWidth": 64, "frameHeight": 64, "boss": false, "frames": ["idle-1", "idle-2", "attack", "hurt", "down", "victory"] },
+    "grave-moth": { "sprite": "monsters/grave-moth.png", "frameWidth": 64, "frameHeight": 64, "boss": false, "frames": ["idle-1", "idle-2", "attack", "hurt", "down", "victory"] },
+    "tomb-guard": { "sprite": "monsters/tomb-guard.png", "frameWidth": 64, "frameHeight": 64, "boss": false, "frames": ["idle-1", "idle-2", "attack", "hurt", "down", "victory"] },
+    "baron-bones": { "sprite": "monsters/baron-bones.png", "frameWidth": 128, "frameHeight": 128, "boss": true, "frames": ["idle-1", "idle-2", "attack", "hurt", "down", "victory"] },
+    "dust-sprite": { "sprite": "monsters/dust-sprite.png", "frameWidth": 64, "frameHeight": 64, "boss": false, "frames": ["idle-1", "idle-2", "attack", "hurt", "down", "victory"] },
+    "cracked-golem": { "sprite": "monsters/cracked-golem.png", "frameWidth": 64, "frameHeight": 64, "boss": false, "frames": ["idle-1", "idle-2", "attack", "hurt", "down", "victory"] },
+    "rune-eagle": { "sprite": "monsters/rune-eagle.png", "frameWidth": 64, "frameHeight": 64, "boss": false, "frames": ["idle-1", "idle-2", "attack", "hurt", "down", "victory"] },
+    "restless-sentinel": { "sprite": "monsters/restless-sentinel.png", "frameWidth": 128, "frameHeight": 128, "boss": true, "frames": ["idle-1", "idle-2", "attack", "hurt", "down", "victory"] },
+    "sneaky-imp": { "sprite": "monsters/sneaky-imp.png", "frameWidth": 64, "frameHeight": 64, "boss": false, "frames": ["idle-1", "idle-2", "attack", "hurt", "down", "victory"] }
+  }
+}

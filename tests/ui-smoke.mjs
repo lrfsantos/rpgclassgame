@@ -82,7 +82,7 @@ try {
   // wait for the lobby to render
   let rendered = false;
   for (let i = 0; i < 30; i++) {
-    if (await evaluate(send, `!!document.querySelector('#stage .big-title')`)) { rendered = true; break; }
+    if (await evaluate(send, `!!document.querySelector('#stage .title-screen')`)) { rendered = true; break; }
     await wait(300);
   }
   assert(rendered, "stage lobby rendered");

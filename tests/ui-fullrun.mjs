@@ -122,10 +122,10 @@ async function driveRun(gm, stageClient = null) {
     if (ended) break;
 
     // sample indicators on the stage (single-window shares the page)
-    const hasEnemy = await stage.eval(`!!document.querySelector('.stage .enemy')`);
-    const hasSayit = await stage.eval(`!!document.querySelector('.stage .sayit')`);
+    const hasEnemy = await stage.eval(`!!document.querySelector('.stage .battle-enemies')`);
+    const hasSayit = await stage.eval(`!!document.querySelector('.stage .battle-menu .prompt')`);
     const hasRoll = await stage.eval(`!!document.querySelector('.stage .roll-line')`);
-    const sayitLeaksHints = await stage.eval(`(()=>{const e=document.querySelector('.stage .sayit'); return !!(e && /Teacher hint|target:|example:|Grade the Language/i.test(e.textContent));})()`);
+    const sayitLeaksHints = await stage.eval(`(()=>{const e=document.querySelector('.stage .battle-menu .prompt'); return !!(e && /Teacher hint|target:|example:|Grade the Language/i.test(e.textContent));})()`);
     if (hasEnemy) seen.enemy = true;
     if (hasSayit) { seen.sayit = true; if (sayitLeaksHints) { console.error("FAIL: stage Say-it leaks teacher hints"); failures++; } }
     if (hasRoll) seen.roll = true;

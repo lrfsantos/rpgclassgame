@@ -21,3 +21,11 @@
 - All UI features are verified by headless-Edge tests that drive real clicks/keypresses and assert visible DOM text (user cannot test code; "green" engine tests alone are insufficient).
 - Global window.onerror + unhandledrejection banner with a Copy button on every page (a silent blank page must never happen again).
 - B0 UI (gm.js/stage.js) is plain-functionality styling using the AGENTS.md section 5 palette; art work (sprites, d20, typewriter, pixel font) is deferred to B1.
+- B1 stage.js is the final JRPG battle layout (enemies right, party left, bordered bottom menu window, damage numbers, d20 face with roll breakdown, typewriter narration) + title screen with code-drawn pixel logo and animated backdrop. Reset for reduced motion.
+- Sprite manifest (assets/sprites/manifest.json) maps every character/monster/portrait to a PNG path, frame size (party 32x48, enemies 64x64, bosses 128x128, portraits 64x64), and frame list; missing PNG -> code-drawn placeholder. Documented in SPRITE_GUIDE.md.
+- Sprites: all current art is code-drawn placeholders in src/engine/sprites.js (FF4-style simple/classic): hero palettes per class, slime/bat/golem/bird shapes per monster. No external images yet (art pending).
+- Audio: Web Audio chiptune SFX (click/hit/crit/fumble/dice/heal/victory/levelup) + looping arpeggio music, no files; initAudio resumes on user gesture; mute hook (setMuted) ready for a B2 UI toggle.
+- Fonts: self-hosted OFL pixel font Press Start 2P for headings/logo + VT323 for long text in /assets/fonts (OFL, logged for CREDITS later).
+- Typewriter text (click/Enter skips) via src/ui/typewriter.js; respects prefers-reduced-motion (instant print).
+- Global error handler's file:// guard waited for body before appending (runs in <head>); fixed so the message actually shows when opening index.html directly.
+
