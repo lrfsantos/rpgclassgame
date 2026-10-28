@@ -181,7 +181,7 @@ export function mountGm(container) {
         applyText();
         break;
       case "open-stage":
-        window.open("stage.html", "_blank");
+        window.open("stage.html", "classroom-stage");
         break;
     }
   }

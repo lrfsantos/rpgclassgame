@@ -39,6 +39,7 @@ export function mutate(fn) {
   const next = clone(state);
   const result = fn(next);
   state = next;
+  bumpRev();
   if (state.history) {
     state.history.push(prev);
     if (state.history.length > HISTORY_LIMIT) state.history.shift();
@@ -54,6 +55,7 @@ export function undo() {
   const remaining = state.history.slice(0, -1);
   const prev = state.history[state.history.length - 1];
   state = prev;
+  bumpRev();
   state.history = remaining;
   save();
   emit();
@@ -62,12 +64,40 @@ export function undo() {
 
 export function save() {
   try {
-    const toSave = clone(state);
-    delete toSave.history;
-    localStorage.setItem(SAVE_KEY, JSON.stringify(toSave));
+    localStorage.setItem(SAVE_KEY, JSON.stringify(publishable()));
   } catch (e) {
     console.warn("save failed", e);
   }
+}
+
+// State without history: safe to broadcast and persist.
+export function publishable() {
+  const s = clone(state);
+  delete s.history;
+  return s;
+}
+
+function bumpRev() {
+  state.rev = (state.rev || 0) + 1;
+}
+
+// Stage side: receive the save key from another page (same origin).
+// cb receives the parsed state (or null). Returns an unsubscribe fn.
+export function watchStorage(cb) {
+  const onStorage = (ev) => {
+    if (ev.key !== SAVE_KEY) return;
+    if (!ev.newValue) {
+      cb(null);
+      return;
+    }
+    try {
+      cb(JSON.parse(ev.newValue));
+    } catch (e) {
+      /* ignore bad payload */
+    }
+  };
+  window.addEventListener("storage", onStorage);
+  return () => window.removeEventListener("storage", onStorage);
 }
 
 export function load() {
@@ -86,6 +116,7 @@ export function load() {
 export function newGameState() {
   return {
     schema: SCHEMA,
+    rev: 0,
     phase: "lobby",
     players: [],
     expedition: null,

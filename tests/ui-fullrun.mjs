@@ -257,6 +257,110 @@ try {
   } catch (e) {
     console.error("phase 2 failed:", e.message);
   }
+
+  // ---- Phase 3: cross-page sync, both GM modes, same context ----
+  let phase3Done = false;
+  const phase3Latency = [];
+  const phase3Ok = [];
+
+  async function driveCrossPage(gmUrl, label) {
+    const gmTab = await newTab(gmUrl);
+    const cG = connect(gmTab.webSocketDebuggerUrl);
+    await cG.ready;
+    await cG.send("Runtime.enable");
+    await cG.send("Page.enable");
+    const gmX = makeClient(cG.send);
+
+    const stTab = await newTab("http://localhost:8000/stage.html");
+    const cS = connect(stTab.webSocketDebuggerUrl);
+    await cS.ready;
+    await cS.send("Runtime.enable");
+    await cS.send("Page.enable");
+    const stageX = makeClient(cS.send);
+    await wait(700);
+
+    // fresh save in both pages (same profile => same localStorage)
+    await gmX.eval(`localStorage.removeItem('classroom-rpg-save-v1'); true`);
+    await cG.send("Page.navigate", { url: gmUrl });
+    await wait(400);
+
+    // broadcast sniffer on the GM page
+    await gmX.eval(`(()=>{try{const bc=new BroadcastChannel('classroom-rpg'); bc.onmessage=(e)=>{window.__lastBc=e.data;};}catch(e){}return true;})()`);
+
+    // open the drawer on index.html (no-op on gm.html where it doesn't exist)
+    await gmX.eval(`(()=>{const b=document.getElementById('gm-drawer-open'); if(b)b.click(); return true;})()`);
+    await waitFor(gmX, `!!document.querySelector('[data-action="quick-add-4"]')`, 6000);
+    await gmX.eval(`document.querySelector('[data-action="quick-add-4"]').click()`);
+    await waitFor(gmX, `document.querySelectorAll('.player-row').length >= 4`, 6000);
+    const nPlayers = await gmX.eval(`document.querySelectorAll('.player-row').length`);
+    assert(nPlayers >= 4, label + ": 4+ players added (got " + nPlayers + ")");
+    const epId = await gmX.eval(`(()=>{const b=document.querySelector('[data-action="start-episode"]'); return b?b.getAttribute('data-value'):null;})()`);
+    assert(!!epId, label + ": episode start button found");
+    await gmX.eval(`document.querySelector('[data-action="start-episode"]').click()`);
+    await waitFor(gmX, `!!document.querySelector('#gm .step-bar') || /Story Complete/i.test(document.body.textContent)`, 6000);
+
+    let actions = 0;
+    const lat = [];
+    for (let i = 0; i < 200; i++) {
+      if (await gmX.eval(`/Story Complete|Story Over/i.test(document.body.textContent)`)) break;
+      const step = await gmX.eval(`(()=>{const s=document.querySelector('#gm .step-bar .step.current'); return s?s.textContent:null;})()`);
+      let clicked = "none";
+      if (step === "CHOOSE") {
+        clicked = (await gmX.eval(`(()=>{
+          const b=document.querySelector('[data-action="choose-approach"]');
+          if (b) { b.click(); return true; }
+          const a=document.querySelector('[data-action="primary-attack"]:not([disabled])');
+          if (a) { a.click(); return true; }
+          const s=document.querySelector('[data-action="use-skill"]:not([disabled])');
+          if (s) { s.click(); return true; }
+          return false;
+        })()`)) ? "choose" : "none";
+      } else if (step === "SAY IT") {
+        clicked = (await gmX.eval(`(()=>{const b=document.querySelector('[data-action="grade-story"][data-value="2"]')||document.querySelector('[data-action="judge-lang"][data-value="2"]'); if(b){b.click();return true;}return false;})()`)) ? "grade" : "none";
+      } else {
+        clicked = (await gmX.eval(`(()=>{
+          const b=document.querySelector('[data-action="story-continue"]:not([disabled])');
+          if (b) { b.click(); return true; }
+          const a=document.querySelector('[data-action="primary-attack"]:not([disabled])');
+          if (a) { a.click(); return true; }
+          const s=document.querySelector('[data-action="use-skill"]:not([disabled])');
+          if (s) { s.click(); return true; }
+          return false;
+        })()`)) ? "primary" : "none";
+      }
+      if (clicked === "none") { await wait(200); continue; }
+      actions++;
+      const expectedStep = await gmX.eval(`(()=>{const s=document.querySelector('#gm .step-bar .step.current'); return s?s.textContent:null;})()`);
+      const t0 = Date.now();
+      const synced = await waitFor(stageX, `(()=>{
+        const s=document.querySelector('#stage .step-bar .step.current');
+        if (s && s.textContent===${JSON.stringify(expectedStep)}) return true;
+        return /Story Complete|Story Over/i.test(document.body.textContent);
+      })()`, 1000);
+      lat.push(Date.now() - t0);
+      if (!synced) { console.error("FAIL: " + label + " cross-page stage did not match GM step within 1s"); failures++; }
+    }
+
+    const stageRecap = await stageX.eval(`/Story Complete|Story Over/i.test(document.body.textContent)`);
+    assert(stageRecap, label + ": stage.html showed the recap (cross-page end state propagated)");
+    assert(actions >= 10, label + ": drove at least 10 actions (got " + actions + ")");
+    assert(await gmX.eval(`(()=>{const b=window.__lastBc; return !!(b&&b.state&&!('history' in b.state));})()`), label + ": broadcast payload has no history");
+    assert(await gmX.eval(`(()=>{const raw=localStorage.getItem('classroom-rpg-save-v1'); if(!raw)return true; const p=JSON.parse(raw); return !('history' in p);})()`), label + ": saved JSON has no history");
+    phase3Ok.push(label);
+    phase3Latency.push(...lat);
+    return actions;
+  }
+
+  try {
+    const a1 = await driveCrossPage("http://localhost:8000/index.html", "index");
+    const a2 = await driveCrossPage("http://localhost:8000/gm.html", "gm.html");
+    phase3Done = true;
+    console.log("phase3: actions per mode:", a1, a2);
+    console.log("phase3: cross-page latency (ms): " + (phase3Latency.length ? phase3Latency.join(",") : "none"));
+    console.log("--- phase 3 (cross-page sync) complete ---");
+  } catch (e) {
+    console.error("phase 3 failed:", e.message);
+  }
 } catch (e) {
   console.error("CRASH:", e);
   failures++;

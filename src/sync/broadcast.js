@@ -20,13 +20,13 @@ function openChannel() {
 }
 
 // ---- GM console side (authoritative) ----
-export function openGmChannel(getState) {
+export function openGmChannel(getPublishable) {
   const channel = openChannel();
   if (!channel) return null;
   channel.onmessage = (ev) => {
     const msg = ev.data || {};
     if (msg.type === PING) {
-      send("state", { state: getState() });
+      send("state", { state: getPublishable() });
     }
   };
   function send(type, payload = {}) {
@@ -39,7 +39,7 @@ export function openGmChannel(getState) {
   return {
     // Call after every mutation to push the new state to all stages.
     broadcast() {
-      send("state", { state: getState() });
+      send("state", { state: getPublishable() });
     },
     close() {
       try {
