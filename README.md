@@ -99,8 +99,7 @@ protogame/
 ├─ content/          all JSON game data
 ├─ tests/            headless-Edge UI tests + engine tests
 ├─ assets/           fonts (OFL) + sprite manifest
-├─ AUDIT.md          audit checklist (pre-B1.5)
-├─ AUDIT_02.md       audit checklist (post-B1.5 / Step C)
+├─ AGENTS.md         working rules for AI agents on this project
 ├─ SPRITE_GUIDE.md   how to add real sprite art
 ├─ CONTENT_GUIDE.md  how to edit game content
 └─ NOTES.md          design decisions (one line each, decision + reason)
@@ -117,7 +116,7 @@ root:
 node tests/ui-smoke.mjs     drawer open/close via click + G/Escape
 node tests/ui-fullrun.mjs   full expedition through the real UI
 node tests/ui-episode.mjs   story episode: prompts, narration, flags, spoilers
-node tests/layout.mjs       fixed 16:9 geometry at 5 viewports
+node tests/layout.mjs       fixed 16:9 geometry at 6 viewports (incl. 960x540)
 node tests/validator.mjs    content validation (bad files fail with messages)
 node tests/functional.mjs   engine rules (undo, reroll, NPC, spotlight)
 node tests/stress.mjs       120 random runs, every run must end cleanly

@@ -133,6 +133,7 @@ function buildIndex(loaded) {
 }
 
 const SCENE_KINDS = ["story", "combat"];
+const CHOICE_KEYS = ["id", "label", "stat", "difficulty", "text", "target", "example", "onGood", "onBad"];
 function validateEpisodes(data) {
   if (!Array.isArray(data.episodes)) return ["missing array 'episodes'"];
   const errs = [];
@@ -151,13 +152,27 @@ function validateEpisodes(data) {
     ep.scenes.forEach((sc, j) => {
       errs.push(...fail(!seenScene.has(sc.id), `episode ${ep.id}: duplicate scene id "${sc.id}"`));
       seenScene.add(sc.id);
+      if (sc.kind === "story") {
+        const hasChoices = Array.isArray(sc.choices) && sc.choices.length >= 3;
+        errs.push(...fail(hasChoices, `episode ${ep.id}: story scene ${sc.id} needs at least 3 choices`));
+        if (hasChoices) {
+          const seenChoice = new Set();
+          sc.choices.forEach((c, k) => {
+            errs.push(...fail(!seenChoice.has(c.id), `episode ${ep.id}: scene ${sc.id} duplicate choice id "${c.id}"`));
+            seenChoice.add(c.id);
+            errs.push(...fail(CHOICE_KEYS.filter((k) => k !== "difficulty").every((key) => typeof c[key] === "string"), `episode ${ep.id}: scene ${sc.id} choice ${c.id || k} needs ${CHOICE_KEYS.filter((x) => x !== "difficulty").join("/")} as strings`));
+            errs.push(...fail(STATS.includes(c.stat), `episode ${ep.id}: scene ${sc.id} choice ${c.id} bad stat "${c.stat}"`));
+            errs.push(...fail(Number.isFinite(c.difficulty), `episode ${ep.id}: scene ${sc.id} choice ${c.id} needs numeric difficulty`));
+          });
+        }
+      } else {
+        errs.push(
+          ...fail(typeof sc.monsterId === "string", `episode ${ep.id}: combat scene ${sc.id} needs monsterId`),
+          ...fail(sc.prompt && typeof sc.prompt.text === "string" && typeof sc.prompt.target === "string" && typeof sc.prompt.example === "string", `episode ${ep.id}: combat scene ${sc.id} needs prompt {text, target, example}`)
+        );
+      }
       errs.push(
-        ...fail(sc.kind !== "story" || STATS.includes(sc.stat), `episode ${ep.id}: story scene ${sc.id} bad stat "${sc.stat}"`),
-        ...fail(sc.kind !== "story" || Number.isFinite(sc.difficulty), `episode ${ep.id}: story scene ${sc.id} needs a numeric difficulty`),
-        ...fail(sc.kind !== "combat" || typeof sc.monsterId === "string", `episode ${ep.id}: combat scene ${sc.id} needs monsterId`),
-        ...fail(sc.prompt && typeof sc.prompt.text === "string" && typeof sc.prompt.target === "string" && typeof sc.prompt.example === "string", `episode ${ep.id}: scene ${sc.id} needs prompt {text, target, example}`),
-        ...fail(sc.conditional === undefined || (typeof sc.conditional.flag === "string" && sc.conditional.whenSet && sc.conditional.whenUnset), `episode ${ep.id}: scene ${sc.id} conditional needs {flag, whenSet, whenUnset}`),
-        ...fail(sc.flags === undefined || typeof sc.flags === "object", `episode ${ep.id}: scene ${sc.id} flags must be an object`)
+        ...fail(sc.conditional === undefined || (typeof sc.conditional.flag === "string" && sc.conditional.whenSet && sc.conditional.whenUnset), `episode ${ep.id}: scene ${sc.id} conditional needs {flag, whenSet, whenUnset}`)
       );
     });
   });

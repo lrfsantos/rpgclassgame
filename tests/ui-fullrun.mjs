@@ -118,7 +118,7 @@ async function driveRun(gm, stageClient = null) {
   console.log("expedition started");
 
   while (steps++ < safety) {
-    const ended = await gm.eval(`!!(document.body.textContent.match(/Expedition Complete!|Expedition Over/))`);
+    const ended = await gm.eval(`!!(document.body.textContent.match(/Expedition Complete!|Expedition Over|Story Complete!|Story Over/))`);
     if (ended) break;
 
     // sample indicators on the stage (single-window shares the page)
@@ -199,7 +199,7 @@ try {
   const gm = makeClient(c1.send);
   const seen1 = await driveRun(gm);
 
-  const recap1 = await gm.eval(`!!(document.body.textContent.match(/Expedition Complete!|Expedition Over/))`);
+  const recap1 = await gm.eval(`!!(document.body.textContent.match(/Expedition Complete!|Expedition Over|Story Complete!|Story Over/))`);
   assert(recap1, "single-window run reached the recap screen");
   assert(seen1.enemy, "single-window: enemy shown on stage during combat");
   assert(seen1.sayit, "single-window: Say-it prompt shown on stage");

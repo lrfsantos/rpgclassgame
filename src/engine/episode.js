@@ -1,8 +1,6 @@
-// Episode builder (Step C): turns a scripted episode from content/episodes.json
-// into the same expedition-shaped state the engine already runs (rooms with
-// events), so story scenes reuse the d20 + language-check machinery unchanged.
-// Story scenes become challenge rooms with a scene-specific prompt + outcome;
-// combat scenes become combat rooms referencing a monster from monsters.json.
+// Episode builder (Step C + PART 1B): turns a scripted episode from
+// content/episodes.json into expedition-shaped state. Story scenes become
+// "story" rooms carrying approach choices; combat scenes reuse the combat engine.
 import { getContent } from "./content.js";
 
 export function buildEpisodeExpedition(episode) {
@@ -23,25 +21,21 @@ export function buildEpisodeExpedition(episode) {
           monsterTemplate: m,
           monsterName: m ? m.name : sc.monsterId,
           scenePrompt: sc.prompt,
-          scene: { onGood: sc.onGood, onBad: sc.onBad, flags: sc.flags },
+          scene: { onGood: sc.onGood, onBad: sc.onBad },
         },
       };
     }
     return {
       id: sc.id,
-      kind: "challenge",
+      kind: "story",
       name: sc.flavour,
       flavour: sc.flavour,
       level: 1,
-      stat: sc.stat,
-      difficulty: sc.difficulty,
       event: {
-        type: "challenge",
-        stat: sc.stat,
-        difficulty: sc.difficulty,
-        scenePrompt: sc.prompt,
+        type: "story",
+        choices: sc.choices || [],
         conditional: sc.conditional || null,
-        scene: { onGood: sc.onGood, onBad: sc.onBad, flags: sc.flags },
+        scene: { flavour: sc.flavour },
       },
     };
   });

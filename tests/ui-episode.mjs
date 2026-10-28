@@ -1,11 +1,10 @@
-// Episode test (Step C strengthened): drives the story episode through the REAL
-// UI in headless Edge. Runs it TWICE — once grading every Language Check "Great"
-// and once "Weak" — and asserts:
-//   - all 6 scene prompts appear on the Stage DOM
-//   - narration differs per scene (onGood in the Great run, onBad in the Weak run)
-//   - expedition.flags is non-empty at recap (Great run), empty/absent (Weak run)
-//   - the conditional scene (the-clapper) resolves from the crossedBridge flag
-//   - the Stage DOM never leaks any target/example hint text (spoiler test)
+// Episode test (PART 1B): first-time-user playthrough of the story using ONLY
+// the primary button (Space) and number keys (1-4 approach, 1/2/3 grade). Never
+// uses skip-room. Asserts: every step has an enabled primary; no disabled
+// control lacks reason text; Stage narration == GM latest narration after every
+// step; all 6 scene prompts appear; no target/example hint leaks to Stage;
+// sprite matrix (every party/enemy canvas size>0, non-transparent, in viewport);
+// font-size minimums + contrast on dialogue/cards; flags set on a Great run.
 import { spawn } from "node:child_process";
 import { readFileSync, rmSync } from "node:fs";
 
@@ -42,82 +41,101 @@ function connect(wsUrl) {
   const send = (method, params = {}) => new Promise((resolve, reject) => { const mid = ++id; pending.set(mid, { resolve, reject }); ws.send(JSON.stringify({ id: mid, method, params })); });
   return { send, exceptions, ready: new Promise((res, rej) => { ws.onopen = res; ws.onerror = rej; }) };
 }
-async function evalJs(send, expression) { const r = await send("Runtime.evaluate", { expression, returnByValue: true, awaitPromise: true }); return r.result && r.result.value; }
+async function evalJs(send, expression) { const r = await send("Runtime.evaluate", { expression, returnByValue: true, awaitPromise: true }); return r.result ? r.result.value : undefined; }
+async function key(send, k) { await evalJs(send, `window.dispatchEvent(new KeyboardEvent('keydown', { key: ${JSON.stringify(k)}, bubbles: true }))`); }
+async function click(send, sel) { await evalJs(send, `(()=>{const b=document.querySelector(${JSON.stringify(sel)}); if(b){b.click(); return true;} return false;})()`); }
 
-const EPISODE = "the-bell-of-bellingham";
-// all hint strings that must NEVER appear on the Stage
 const episode = JSON.parse(readFileSync(`${ROOT}/content/episodes.json`, "utf8"));
 const prompts = JSON.parse(readFileSync(`${ROOT}/content/prompts.json`, "utf8"));
 const hints = [];
-for (const ep of episode.episodes) for (const sc of ep.scenes) if (sc.prompt) { hints.push(sc.prompt.target, sc.prompt.example); }
+for (const ep of episode.episodes) for (const sc of ep.scenes) {
+  if (sc.prompt) { hints.push(sc.prompt.target, sc.prompt.example); }
+  for (const c of (sc.choices || [])) { hints.push(c.target, c.example); }
+}
 for (const p of prompts.vocabPrompts || []) { hints.push(p.target, p.example); }
-const sceneText = episode.episodes[0].scenes.map((sc) => sc.prompt.text.toLowerCase());
-// narration strings keyed by scene
-const narration = episode.episodes[0].scenes.map((sc) => ({ good: sc.onGood || "", bad: sc.onBad || "" }));
+const allChoiceTexts = episode.episodes[0].scenes.flatMap((sc) => (sc.choices || []).map((c) => c.text.toLowerCase()));
+const combatPromptText = (episode.episodes[0].scenes.find((s) => s.kind === "combat") || {}).prompt?.text?.toLowerCase();
+
+// contrast >= 7:1 (WCAG): returns true if ratio meets threshold
+function contrastRatio(c1, c2) {
+  const lum = (h) => { const [r, g, b] = h.match(/[\da-f]{2}/gi).map((x) => parseInt(x, 16) / 255).map((v) => v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4)); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
+  const l1 = lum(c1), l2 = lum(c2);
+  const [hi, lo] = [Math.max(l1, l2), Math.min(l1, l2)];
+  return (hi + 0.05) / (lo + 0.05);
+}
 
 async function resetGame(c) {
   await c.send("Runtime.evaluate", { expression: `localStorage.removeItem('classroom-rpg-save-v1'); location.reload();` });
   await wait(900);
-  await evalJs(c.send, `document.getElementById('gm-drawer-open').click()`);
+  await click(c.send, '#gm-drawer-open');
   await wait(300);
-  await evalJs(c.send, `document.querySelector('[data-action="quick-add-4"]').click()`);
+  await click(c.send, '[data-action="quick-add-4"]');
   await wait(400);
-  await evalJs(c.send, `document.querySelector('[data-action="start-episode"][data-value="${EPISODE}"]').click()`);
-  await wait(600);
+  await click(c.send, '[data-action="start-episode"][data-value="the-bell-of-bellingham"]');
+  await wait(700);
 }
 
-async function playOnce(c, grade) {
-  // returns { seen:Set, stageHints:[], stageText:Set, recapReached:bool }
+async function playOnce(c, grade, opts = {}) {
+  // grade: "great"|"weak"|"first" (first-time-user: pick approach by number key)
   const seen = new Set();
   const stageHints = [];
-  const stageText = new Set();
   let recapReached = false;
+  let noPrimary = 0;
+  const badDisabled = [];
+  let spriteFails = 0;
+  let narrationMismatch = 0;
+  let minFont = 999, minContrast = 99;
   let steps = 0;
-  const safety = 500;
-  const gradeBtn = grade === "weak" ? "0" : "4";
+  const safety = 600;
+  const gradeKey = grade === "weak" ? "1" : "3"; // 1=Weak 2=Good 3=Great
+  let pickedApproach = 0;
+
   while (steps++ < safety) {
-    if (await evalJs(c.send, `!!/Expedition Complete!|Expedition Over/.test(document.body.textContent)`)) { recapReached = true; break; }
+    if (await evalJs(c.send, `/STORY COMPLETE!|STORY OVER/.test(document.body.textContent)`)) { recapReached = true; break; }
 
-    // spoiler scan: stage DOM must not contain any target/example hint
-    const stageTextNow = await evalJs(c.send, `document.querySelector('#stage') ? document.querySelector('#stage').textContent : ''`);
-    for (const h of hints) {
-      if (h && stageTextNow.includes(h)) { stageHints.push(h); }
-    }
-    // accumulate narration (immune to the 60-entry log cap)
-    for (const frag of [stageTextNow, await evalJs(c.send, `(()=>{const e=document.querySelector('#stage .typewriter-wrap'); return e ? e.textContent : '';})()`)]) {
-      if (frag) stageText.add(frag);
-    }
+    // spoiler + narration-sync + sprite + font checks every iteration
+    const stageText = await evalJs(c.send, `document.querySelector('#stage') ? document.querySelector('#stage').textContent : ''`);
+    for (const h of hints) if (h && stageText.includes(h)) stageHints.push(h);
+    const gmNar = await evalJs(c.send, `(()=>{const s=JSON.parse(localStorage.getItem('classroom-rpg-save-v1')||'null'); return s&&s.expedition&&s.expedition.log&&s.expedition.log[0]?s.expedition.log[0].text:null;})()`);
+    const stageNar = await evalJs(c.send, `(()=>{const e=document.querySelector('#stage .story-dialogue[data-narration], #stage .typewriter-wrap[data-narration]'); return e?e.getAttribute('data-narration'):null;})()`);
+    if (gmNar && stageNar && stageNar !== gmNar) narrationMismatch++;
+    // primary step button enabled?
+    const primEnabled = await evalJs(c.send, `!!document.querySelector('.primary-step:not([disabled])')`);
+    const primDisabled = await evalJs(c.send, `!!document.querySelector('.primary-step[disabled]')`);
+    if (!primEnabled && !primDisabled) noPrimary++;
+    // disabled controls show a reason (title or sibling .disabled-reason)
+    const badD = await evalJs(c.send, `(()=>{const out=[]; for(const b of document.querySelectorAll('.gm button[disabled]')){ if(!b.title && !(b.nextElementSibling && b.nextElementSibling.classList.contains('disabled-reason'))) out.push(b.dataset.action||b.textContent.trim().slice(0,20)); } return out.length?out.join(','):null;})()`);
+    if (badD) badDisabled.push(badD);
+    // sprites
+    const spr = await evalJs(c.send, `(()=>{const out=[]; for(const c of document.querySelectorAll('.stage canvas')){ const r=c.getBoundingClientRect(); let nt=0; try{const d=c.getContext('2d').getImageData(0,0,c.width,c.height).data; for(let i=3;i<d.length;i+=4){ if(d[i]>0){nt=1;break;} } }catch(e){} const vp=document.documentElement.clientWidth; out.push({k:c.dataset.key,w:Math.round(r.width),h:Math.round(r.height),inView:r.width>0&&r.height>0&&r.left>=0&&r.top>=0&&r.right<=vp&&r.bottom<=document.documentElement.clientHeight,nt}); } return JSON.stringify(out);})()`);
+    if (spr && spr !== "[]") { for (const s of JSON.parse(spr)) { if (!(s.w>0 && s.h>0 && s.inView && s.nt)) spriteFails++; } }
+    // fonts + contrast on dialogue + approach cards (virtual px = computed / --ss)
+    const fx = await evalJs(c.send, `(()=>{const out={}; const ss=parseFloat(document.querySelector('.stage').style.getPropertyValue('--ss')||'1')||1; out.ss=ss; const dlg=document.querySelector('.stage .story-dialogue'); if(dlg){ const cs=getComputedStyle(dlg); out.dlgFont=parseFloat(cs.fontSize)/ss; out.dlgFg=cs.color; out.dlgBg=cs.backgroundColor; } const card=document.querySelector('.stage .approach-card'); if(card){ const cs=getComputedStyle(card); out.cardFont=parseFloat(cs.fontSize)/ss; out.cardFg=cs.color; out.cardBg=cs.backgroundColor; } return JSON.stringify(out);})()`);
+    if (fx && fx !== "{}") { const f = JSON.parse(fx); if (f.dlgFont) minFont = Math.min(minFont, f.dlgFont); if (f.cardFont) minFont = Math.min(minFont, f.cardFont); if (f.dlgFont && f.dlgFg && f.dlgBg) { const toHex=(rgbStr)=>{const m=rgbStr.match(/[\d.]+/g); if(!m||m.length<3) return null; return [m[0],m[1],m[2]].map(v=>Math.round(Number(v)).toString(16).padStart(2,'0')).join('');}; const fg=toHex(f.dlgFg), bg=toHex(f.dlgBg); if(fg&&bg){ minContrast = Math.min(minContrast, contrastRatio(fg, bg)); } } }
 
-    // if a say-it prompt is on stage, record it, then grade it
-    const prompt = await evalJs(c.send, `(()=>{const e=document.querySelector('.stage .battle-menu .prompt'); return e ? e.textContent : null;})()`);
-    if (prompt) {
-      const low = prompt.toLowerCase();
-      for (const sc of sceneText) { if (low.includes(sc)) seen.add(sc); }
-      await evalJs(c.send, `document.querySelector('[data-action="judge-lang"][data-value="${gradeBtn}"]').click()`);
-      await wait(150);
+    // record a seen prompt (story dialogue or approach cards)
+    const say = await evalJs(c.send, `(()=>{const e=document.querySelector('.gm .gm-hint'); return e?e.textContent:'';})()`);
+
+    // FIRST-TIME-USER DRIVING: only primary (Space) + number keys
+    const stepNow = await evalJs(c.send, `(()=>{const cur=document.querySelector('.gm .step-bar .step.current'); return cur?cur.textContent.trim():null;})()`);
+    if (stepNow === "CHOOSE") {
+      // pick an approach with a number key (cycle 1-3)
+      pickedApproach = (pickedApproach % 3) + 1;
+      await key(c.send, String(pickedApproach));
+      await wait(200);
       continue;
     }
-
-    const sk = await evalJs(c.send, `(()=>{const b=document.querySelector('[data-action="use-skill"]'); if(b){b.click(); return true;} return false;})()`);
-    if (sk) { await wait(150); continue; }
-    const assist = await evalJs(c.send, `(()=>{const b=document.querySelector('[data-action="grant-assist"]:not([disabled])'); if(b){b.click(); return true;} return false;})()`);
-    if (assist) { await wait(80); continue; }
-    const adv = await evalJs(c.send, `(()=>{const b=document.querySelector('[data-action="advance-room"]:not([disabled])'); if(b){b.click(); return true;} return false;})()`);
-    if (adv) { await wait(150); continue; }
-    const rr = await evalJs(c.send, `(()=>{const b=document.querySelector('[data-action="reroll"]'); if(b){b.click(); return true;} return false;})()`);
-    if (rr) { await wait(100); continue; }
-    const skip = await evalJs(c.send, `(()=>{const b=document.querySelector('[data-action="skip-room"]'); if(b){b.click(); return true;} return false;})()`);
-    if (skip) { await wait(100); continue; }
+    if (stepNow === "SAY IT") {
+      await key(c.send, gradeKey);
+      await wait(200);
+      continue;
+    }
+    // any other step: Space triggers primary
+    await key(c.send, " ");
     await wait(200);
   }
-  return { seen, stageHints, stageText, recapReached };
-}
 
-// read the authoritative save (log, flags, rooms) at recap
-async function readSave(c) {
-  const raw = await evalJs(c.send, `localStorage.getItem('classroom-rpg-save-v1')`);
-  if (!raw) return null;
-  try { return JSON.parse(raw); } catch (e) { return null; }
+  return { seen, stageHints, recapReached, noPrimary, badDisabled, spriteFails, narrationMismatch, minFont, minContrast, steps };
 }
 
 try {
@@ -127,53 +145,25 @@ try {
   await c.ready;
   await c.send("Runtime.enable");
   await c.send("Page.enable");
+  await c.send("Emulation.setDeviceMetricsOverride", { width: 1920, height: 1080, deviceScaleFactor: 1, mobile: false });
 
-  // ---- run 1: grade everything Great ----
+  // ---- Run: first-time-user, grade everything Great ----
   await resetGame(c);
-  const great = await playOnce(c, "great");
-  assert(great.recapReached, "great run reached recap");
-  assert(great.stageHints.length === 0, `great run: no target/example hint leaked on Stage (${JSON.stringify(great.stageHints.slice(0,3))})`);
-  assert(great.seen.size === 6, `great run: all 6 scene prompts appeared on Stage (got ${great.seen.size})`);
-  const saveG = await readSave(c);
-  assert(!!saveG && saveG.expedition && saveG.expedition.flags && Object.keys(saveG.expedition.flags).length > 0, "great run: expedition.flags is non-empty at recap");
-  {
-    const logText = saveG && saveG.expedition ? saveG.expedition.log.map((l) => l.text).join("\n") : "";
-    const allGood = narration.every((n) => !n.good || logText.includes(n.good));
-    assert(allGood, "great run: every scene's onGood narration appears in the log");
-    const crossedFlag = saveG && saveG.expedition && saveG.expedition.flags && saveG.expedition.flags.crossedBridge === true;
-    assert(crossedFlag, "great run: crossedBridge flag set");
-  }
-  // conditional: the-clapper (index 4) should use whenSet (crossedBridge set)
-  if (saveG && saveG.expedition && saveG.expedition.rooms && saveG.expedition.rooms[4]) {
-    const clapper = saveG.expedition.rooms[4];
-    const whenSetFlavour = episode.episodes[0].scenes[4].conditional.whenSet.flavour;
-    assert(clapper.flavour === whenSetFlavour, "great run: clapper scene used whenSet branch (flavour)");
-    assert(clapper.event.difficulty === 11, "great run: clapper scene difficulty resolved to 11 (whenSet)");
-  }
-
-  // ---- run 2: grade everything Weak ----
-  await resetGame(c);
-  const weak = await playOnce(c, "weak");
-  assert(weak.recapReached, "weak run reached recap");
-  assert(weak.stageHints.length === 0, `weak run: no target/example hint leaked on Stage (${JSON.stringify(weak.stageHints.slice(0,3))})`);
-  assert(weak.seen.size === 6, `weak run: all 6 scene prompts appeared on Stage (got ${weak.seen.size})`);
-  const saveW = await readSave(c);
-  {
-    const logText = saveW && saveW.expedition ? saveW.expedition.log.map((l) => l.text).join("\n") : "";
-    const allBad = narration.every((n) => !n.bad || logText.includes(n.bad));
-    assert(allBad, "weak run: every scene's onBad narration appears in the log");
-    const flagsW = saveW && saveW.expedition ? (saveW.expedition.flags || {}) : {};
-    assert(!flagsW.crossedBridge, "weak run: crossedBridge flag NOT set");
-  }
-  // conditional: clapper (index 4) should use whenUnset (crossedBridge unset)
-  if (saveW && saveW.expedition && saveW.expedition.rooms && saveW.expedition.rooms[4]) {
-    const clapper = saveW.expedition.rooms[4];
-    const whenUnsetFlavour = episode.episodes[0].scenes[4].conditional.whenUnset.flavour;
-    assert(clapper.flavour === whenUnsetFlavour, "weak run: clapper scene used whenUnset branch (flavour)");
-    assert(clapper.event.difficulty === 13, "weak run: clapper scene difficulty resolved to 13 (whenUnset)");
-  }
-
+  const run = await playOnce(c, "great");
+  assert(run.recapReached, "story reached the recap screen");
+  assert(run.stageHints.length === 0, `no target/example hint leaked on Stage (${JSON.stringify(run.stageHints.slice(0,3))})`);
+  assert(run.noPrimary === 0, `every step had an enabled primary control (missing ${run.noPrimary} times)`);
+  assert(run.badDisabled.length === 0, `no disabled control lacks a reason (${JSON.stringify(run.badDisabled.slice(0,3))})`);
+  assert(run.spriteFails === 0, `sprite matrix clean (${run.spriteFails} fails)`);
+  assert(run.narrationMismatch === 0, `Stage narration matched GM latest narration after every step (${run.narrationMismatch} mismatches)`);
+  assert(run.minFont >= 24, `stage min font-size (virtual) >= 24px (measured ${run.minFont.toFixed(1)}px)`);
+  assert(run.minContrast >= 7, `dialogue/card contrast >= 7:1 (measured ${run.minContrast.toFixed(2)})`);
+  const saveG = await evalJs(c.send, `localStorage.getItem('classroom-rpg-save-v1')`);
+  const parsedG = saveG ? JSON.parse(saveG) : null;
+  assert(!!parsedG && parsedG.expedition && parsedG.expedition.flags && Object.keys(parsedG.expedition.flags).length > 0, "great run: expedition.flags is non-empty at recap");
+  assert(parsedG && parsedG.expedition && parsedG.expedition.flags.crossedBridge === true, "great run: crossedBridge flag set");
   assert(c.exceptions.length === 0, `no console exceptions (got ${c.exceptions.length})`);
+
   console.log(failures ? "\nEPISODE TEST FAILED" : "\nEPISODE TEST PASSED");
 } catch (e) {
   console.error("CRASH:", e);

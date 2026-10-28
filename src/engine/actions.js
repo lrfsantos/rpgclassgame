@@ -231,12 +231,124 @@ export function startEpisode(episodeId) {
     s.expedition.npcId = null;
     s.expedition.mode = "episode";
     s.expedition.flags = {};
+    s.expedition.step = "listen";
+    s.expedition.storyChoices = null;
+    s.expedition.storyChoiceId = null;
+    s.expedition.storyActor = null;
+    s.expedition.storyDiffBonus = 0;
 
     log(s, `${ep.name}: ${ep.flavour}`, "system");
     maybeAddNpc(s);
     enterCurrentRoom(s);
     return s;
   });
+}
+
+// ---------- episode story steps (LISTEN -> CHOOSE -> SAY IT -> ROLL -> RESULT) ----------
+
+// GM primary button. Behavior depends on the current step.
+export function storyContinue() {
+  return mutate((s) => {
+    const exp = s.expedition;
+    if (!exp || exp.mode !== "episode") return s;
+    if (exp.step === "listen" && exp.roomStatus === "story") {
+      // choose a rotating actor for this scene
+      const alive = aliveHumans(s);
+      if (alive.length === 0) return s;
+      exp.storyActor = alive[exp.challengeIndex % alive.length].id;
+      exp.step = "choose";
+      log(s, `${playerById(s, exp.storyActor).name} picks the approach.`, "system");
+    } else if (exp.step === "roll" && exp.roomStatus === "story") {
+      applyStoryOutcome(s);
+      exp.step = "result";
+    } else if (exp.step === "result" || ["cleared", "defeat"].includes(exp.roomStatus)) {
+      advanceAfterRoom(s, "cleared");
+    }
+    return s;
+  });
+}
+
+// CHOOSE: pick one approach card (keys 1-4). Sets the pending roll.
+export function chooseStoryApproach(choiceId) {
+  return mutate((s) => {
+    const exp = s.expedition;
+    const room = currentRoom(s);
+    if (!exp || exp.mode !== "episode" || exp.roomStatus !== "story" || exp.step !== "choose") return s;
+    const choice = (room.event.choices || []).find((c) => c.id === choiceId);
+    if (!choice) return s;
+    exp.storyChoiceId = choiceId;
+    exp.pending = {
+      playerId: exp.storyActor,
+      choiceId,
+      stat: choice.stat,
+      difficulty: choice.difficulty + (exp.storyDiffBonus || 0),
+      kind: "story",
+      effect: "room",
+    };
+    exp.langPrompt = { text: choice.text, target: choice.target, example: choice.example };
+    exp.langBonus = 0;
+    exp.assistBonus = 0;
+    exp.step = "sayit";
+    log(s, `Say it! ${choice.text}`, "language");
+    return s;
+  });
+}
+
+// SAY IT: teacher grades Weak(0)/Good(2)/Great(4) with keys 1/2/3. Rolls the d20.
+export function gradeStory(bonus) {
+  return mutate((s) => {
+    const exp = s.expedition;
+    if (!exp || exp.mode !== "episode" || exp.roomStatus !== "story" || exp.step !== "sayit") return s;
+    exp.langBonus = bonus;
+    exp.langPrompt = null;
+    const room = currentRoom(s);
+    const choice = (room.event.choices || []).find((c) => c.id === exp.storyChoiceId) || {};
+    const actor = playerById(s, exp.pending.playerId);
+    const good = bonus >= 2;
+    if (choice.onGood && good) log(s, choice.onGood, "challenge");
+    else if (choice.onBad && !good) log(s, choice.onBad, "challenge");
+    if (good && choice.flag) exp.flags[choice.flag] = true;
+    // roll the d20 (shown during ROLL step)
+    resolveStoryRoll(s);
+    exp.step = "roll";
+    return s;
+  });
+}
+
+function resolveStoryRoll(s) {
+  const exp = s.expedition;
+  const p = exp.pending;
+  if (!p) return;
+  const actor = playerById(s, p.playerId);
+  const dice = new Dice(newSeed());
+  const d20 = dice.roll(20);
+  const mod = statMod(actor, p.stat);
+  const total = d20 + mod + exp.langBonus + exp.assistBonus;
+  const crit = d20 === 20;
+  const fumble = d20 === 1;
+  const success = crit ? true : fumble ? false : total >= p.difficulty;
+  exp.lastRoll = { playerId: p.playerId, d20, mod, langBonus: exp.langBonus, assistBonus: exp.assistBonus, total, difficulty: p.difficulty, success, crit, fumble, kind: "story", effect: "room" };
+  const verb = `${actor.name} rolls ${d20} (+${mod}${exp.langBonus ? ` lang ${exp.langBonus}` : ""}${exp.assistBonus ? ` assist ${exp.assistBonus}` : ""}) = ${total} vs ${p.difficulty}`;
+  if (crit) log(s, `${verb} - CRIT! ${pickNarration(s, "crit", {})}`, "combat");
+  else if (fumble) log(s, `${verb} - ${pickNarration(s, "fumble", {})}`, "combat");
+  else log(s, `${verb} - ${success ? "success!" : "fail."}`, "combat");
+}
+
+function applyStoryOutcome(s) {
+  const exp = s.expedition;
+  const r = exp.lastRoll;
+  if (!r) return;
+  if (r.success) {
+    s.party.score += (r.crit ? 6 : 4);
+    log(s, `Spark +${r.crit ? 6 : 4} — the story moves forward.`, "challenge");
+  } else {
+    s.party.score += 1;
+    log(s, `Spark +1 — a stumble, but the story continues.`, "challenge");
+  }
+  exp.roomStatus = "cleared";
+  exp.activePlayerId = null;
+  exp.actionPhase = "idle";
+  exp.challengeIndex += 1;
 }
 
 function maybeAddNpc(s) {
@@ -269,14 +381,31 @@ function enterCurrentRoom(s) {
   s.expedition.assistBonus = 0;
   s.expedition.assistUsed = [];
   s.expedition.lastRoll = null;
+  // reset story-scene state so a combat/other room never shows stale cards
+  s.expedition.storyChoices = null;
+  s.expedition.storyChoiceId = null;
+  s.expedition.storyActor = null;
+  s.expedition.storyDiffBonus = 0;
 
   // episode conditional scenes: resolve difficulty/flavour from flags at entry
   if (ev.conditional) {
     const branch = s.expedition.flags && s.expedition.flags[ev.conditional.flag] ? ev.conditional.whenSet : ev.conditional.whenUnset;
     if (branch) {
       if (Number.isFinite(branch.difficulty)) ev.difficulty = branch.difficulty;
+      if (Number.isFinite(branch.difficultyBonus)) s.expedition.storyDiffBonus = branch.difficultyBonus;
       if (branch.flavour) room.flavour = branch.flavour;
     }
+  }
+
+  if (ev.type === "story") {
+    s.expedition.roomStatus = "story";
+    s.expedition.step = "listen";
+    s.expedition.storyChoices = ev.choices;
+    s.expedition.storyChoiceId = null;
+    s.expedition.storyActor = null;
+    s.expedition.lastRoll = null;
+    log(s, room.flavour, "system");
+    return;
   }
 
   if (ev.type === "combat") {

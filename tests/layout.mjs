@@ -16,6 +16,7 @@ const VIEWPORTS = [
   { w: 1280, h: 720 },
   { w: 2560, h: 1440 },
   { w: 1024, h: 768 },
+  { w: 960, h: 540 },
 ];
 
 let edge = null;
@@ -72,12 +73,13 @@ const GEOM = `(() => {
     menu: rect('.stage .battle-menu'), title: rect('.stage .title-screen'),
     canvas: rect('.stage canvas'),
   };
-  // extenders: elements poking past the viewport
+  // extenders: elements poking past the viewport HORIZONTALLY (vertical is fine
+  // on scrollable pages like gm.html; the fixed Stage is checked by overlap/canvas)
   const extenders = [];
   for (const el of document.querySelectorAll('body *')) {
     const b = el.getBoundingClientRect();
     if (b.width === 0 && b.height === 0) continue;
-    if (b.right > vw + 1 || b.left < -1 || b.bottom > vh + 1 || b.top < -1) {
+    if (b.right > vw + 1 || b.left < -1) {
       extenders.push((el.id ? '#' + el.id : el.className && el.className.baseVal !== undefined ? '.' + el.className.baseVal : el.className ? '.' + String(el.className).split(' ')[0] : el.tagName));
     }
   }

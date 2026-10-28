@@ -16,6 +16,10 @@ set "ROOT=%~dp0"
 echo.
 echo  Starting Classroom RPG server on http://localhost:%PORT%
 echo.
+echo  Two screens: open http://localhost:%PORT%/gm.html on the teacher
+echo  laptop and http://localhost:%PORT%/stage.html on the projector
+echo  (drag the Stage window to the projector and press F11).
+echo.
 
 REM --- locate Node (preferred) ---
 set "NODECMD="

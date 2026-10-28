@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "episodes": [
     {
       "id": "the-bell-of-bellingham",
@@ -9,53 +9,133 @@
         {
           "id": "the-quiet-village",
           "kind": "story",
-          "stat": "heart",
-          "difficulty": 10,
-          "flavour": "The village of Bellingham is too quiet. The Elder shows you a silent bell at the square. 'Wake our bell,' she says. 'The Moss King stole the clapper.'",
-          "prompt": {
-            "text": "Say who your hero is and promise something out loud.",
-            "target": "Make a promise sentence about the bell.",
-            "example": "I promise we will wake the bell today!"
-          },
-          "onGood": "The Elder smiles. 'Good. The path leads to the Tower of Echoes.'",
-          "onBad": "The Elder nods slowly. 'Hm. We will see.'"
+          "flavour": "The village of Bellingham is too quiet. The Elder shows you the silent bell in the square. 'Wake our bell,' she says. 'The Moss King stole the clapper.'",
+          "choices": [
+            {
+              "id": "promise-bravely",
+              "label": "Promise bravely",
+              "stat": "heart",
+              "difficulty": 10,
+              "text": "Make a promise about the bell, out loud.",
+              "target": "A promise sentence with 'will'.",
+              "example": "We will wake the bell today, no matter what!",
+              "onGood": "The Elder smiles and hands you a map of the tower.",
+              "onBad": "The Elder nods slowly. 'Hm. We shall see.'",
+              "flag": "elderTrusted"
+            },
+            {
+              "id": "explain-kindly",
+              "label": "Explain kindly",
+              "stat": "mind",
+              "difficulty": 11,
+              "text": "Explain why the village needs its bell.",
+              "target": "A reason sentence with 'so that'.",
+              "example": "The bell rings so that everyone knows it is time to gather.",
+              "onGood": "The Elder listens carefully and nods. 'Good reason.'",
+              "onBad": "The Elder frowns a little. 'The reasons grow quieter each year.'"
+            },
+            {
+              "id": "ask-a-question",
+              "label": "Ask a question",
+              "stat": "mind",
+              "difficulty": 10,
+              "text": "Ask the Elder a polite question about the tower.",
+              "target": "A polite question with 'Could you tell us...'",
+              "example": "Could you tell us how high the tower is?",
+              "onGood": "The Elder answers with a story and a warning.",
+              "onBad": "The Elder gives a short, worried answer."
+            }
+          ]
         },
         {
           "id": "the-toll-bridge",
           "kind": "story",
-          "stat": "heart",
-          "difficulty": 11,
-          "flavour": "A river blocks the way. A grumpy toll-keeper sits by a rope bridge.",
-          "prompt": {
-            "text": "Ask the toll-keeper politely to let the party cross.",
-            "target": "A polite question with 'May we' or 'Could we'.",
-            "example": "Could we please cross the bridge, kind keeper?"
-          },
-          "onGood": "The keeper shrugs and lowers the rope. 'Fine. Go on, then.'",
-          "onBad": "The keeper raises the rope. 'No sweet words, no crossing.' The party swims across, cold and wet.",
-          "flags": { "crossedBridge": true }
+          "flavour": "A river blocks the way. A grumpy toll-keeper sits by a rope bridge, and he will not move for free.",
+          "choices": [
+            {
+              "id": "ask-politely",
+              "label": "Ask politely",
+              "stat": "heart",
+              "difficulty": 11,
+              "text": "Ask the toll-keeper politely to let the party cross.",
+              "target": "A polite question with 'May we' or 'Could we'.",
+              "example": "Could we please cross the bridge, kind keeper?",
+              "onGood": "The keeper shrugs and lowers the rope. 'Fine. Go on, then.'",
+              "onBad": "The keeper shakes his head. 'No sweet words, no crossing.'",
+              "flag": "crossedBridge"
+            },
+            {
+              "id": "make-a-deal",
+              "label": "Make a deal",
+              "stat": "mind",
+              "difficulty": 12,
+              "text": "Offer the keeper a deal.",
+              "target": "A conditional with 'if'.",
+              "example": "If you let us cross, we will bring you a bell's tune.",
+              "onGood": "The keeper's eyes light up. 'A tune? Deal!'",
+              "onBad": "The keeper taps his coins. 'Not good enough.'",
+              "flag": "crossedBridge"
+            },
+            {
+              "id": "tell-a-joke",
+              "label": "Tell a joke",
+              "stat": "heart",
+              "difficulty": 10,
+              "text": "Make the keeper laugh with one funny sentence.",
+              "target": "A funny sentence with a comparison.",
+              "example": "My hero is as clumsy as a goat in a rainstorm!",
+              "onGood": "The keeper laughs so hard he drops the rope. 'Go on! Go!'",
+              "onBad": "The keeper just stares. 'I have heard funnier bells.'"
+            }
+          ]
         },
         {
           "id": "the-dark-forest",
           "kind": "story",
-          "stat": "mind",
-          "difficulty": 12,
-          "flavour": "Inside the forest, a talking owl asks a riddle to let you pass.",
-          "prompt": {
-            "text": "Answer the owl's riddle: 'What grows louder the more you take from it?'",
-            "target": "A complete sentence with 'the more... the more'.",
-            "example": "The more you take from a hole, the bigger the hole gets."
-          },
-          "onGood": "The owl hoots happily and shows you a hidden path.",
-          "onBad": "The owl sends you the long way around the forest.",
-          "flags": { "owlHelp": true }
+          "flavour": "Inside the forest, a wise owl sits on a branch and will only let you pass if you answer well.",
+          "choices": [
+            {
+              "id": "answer-the-riddle",
+              "label": "Answer the riddle",
+              "stat": "mind",
+              "difficulty": 12,
+              "text": "Answer the owl's riddle: 'What grows louder the more you take from it?'",
+              "target": "A complete answer with 'the more... the more'.",
+              "example": "The more you take from a hole, the bigger the hole gets.",
+              "onGood": "The owl hoots happily and points to a hidden path.",
+              "onBad": "The owl shakes its head. 'That is a hole, not an answer.'",
+              "flag": "owlHelp"
+            },
+            {
+              "id": "reason-aloud",
+              "label": "Reason aloud",
+              "stat": "mind",
+              "difficulty": 13,
+              "text": "Explain your idea step by step to the owl.",
+              "target": "Sequence words: 'First... then... finally...'",
+              "example": "First we listen, then we think, finally we answer.",
+              "onGood": "The owl nods slowly. 'A clear mind. Pass.'",
+              "onBad": "The owl hoots once. 'Too many words, little sense.'"
+            },
+            {
+              "id": "be-very-quiet",
+              "label": "Be very quiet",
+              "stat": "agility",
+              "difficulty": 10,
+              "text": "Give one quiet, calm command to the party.",
+              "target": "A short command with an adverb.",
+              "example": "Tiptoe quietly, everyone.",
+              "onGood": "The owl is so impressed by the silence it flies away. 'Pass!'",
+              "onBad": "A twig snaps. The owl looks annoyed but lets you pass."
+            }
+          ]
         },
         {
           "id": "the-tower",
           "kind": "combat",
           "level": 2,
           "monsterId": "cracked-golem",
-          "flavour": "At last, the Tower of Echoes. The Moss King's guard — a golem of cracked stone — blocks the stairs.",
+          "flavour": "At last, the Tower of Echoes. The Moss King's guard — a golem of cracked stone — blocks the stairs. Only a strong heart and strong words can move it.",
           "prompt": {
             "text": "Tell the golem why the bell must ring again.",
             "target": "A sentence with 'because'.",
@@ -67,42 +147,94 @@
         {
           "id": "the-clapper",
           "kind": "story",
-          "stat": "agility",
-          "difficulty": 13,
-          "flavour": "High in the tower, the clapper hangs on a chain above a bottomless drop. One person must climb and grab it.",
+          "flavour": "High in the tower, the clapper hangs on a chain above a bottomless drop. One brave voice must guide the climber.",
           "conditional": {
             "flag": "crossedBridge",
             "whenSet": {
-              "difficulty": 11,
-              "flavour": "The toll-keeper's rope is still tied to the tower wall. With it, the climb is easy."
+              "difficultyBonus": -2,
+              "flavour": "The toll-keeper's rope is still tied to the tower wall. With it, the climb is easier."
             },
             "whenUnset": {
-              "difficulty": 13,
+              "difficultyBonus": 0,
               "flavour": "No rope, no help. The climb is steep and the chain swings far."
             }
           },
-          "prompt": {
-            "text": "Shout an order to the climber, using 'carefully'.",
-            "target": "An instruction with the adverb 'carefully'.",
-            "example": "Carefully grab the chain, and don't look down!"
-          },
-          "onGood": "The clapper is caught! The party races back down.",
-          "onBad": "The clapper swings away, but with one brave jump you still catch it — barely.",
-          "flags": { "clapperCaught": true }
+          "choices": [
+            {
+              "id": "order-carefully",
+              "label": "Order carefully",
+              "stat": "agility",
+              "difficulty": 13,
+              "text": "Shout an order to the climber, using 'carefully'.",
+              "target": "An instruction with the adverb 'carefully'.",
+              "example": "Carefully grab the chain, and don't look down!",
+              "onGood": "The clapper is caught! The party races back down.",
+              "onBad": "The clapper swings away, but one brave jump still catches it.",
+              "flag": "clapperCaught"
+            },
+            {
+              "id": "encourage-loudly",
+              "label": "Encourage loudly",
+              "stat": "heart",
+              "difficulty": 11,
+              "text": "Cheer the climber on with one strong sentence.",
+              "target": "An encouraging sentence with 'you can'.",
+              "example": "You can do this, we are right behind you!",
+              "onGood": "Your words carry the climber up. The clapper is caught!",
+              "onBad": "The climber hesitates, then jumps anyway. Barely caught."
+            },
+            {
+              "id": "describe-the-plan",
+              "label": "Describe the plan",
+              "stat": "mind",
+              "difficulty": 12,
+              "text": "Describe the safest plan in two clear steps.",
+              "target": "Two steps with 'first' and 'then'.",
+              "example": "First hold the rope tight, then swing to the chain.",
+              "onGood": "The plan works perfectly. The clapper falls into your hands.",
+              "onBad": "The plan is close, but the clapper nearly drops. Still caught!"
+            }
+          ]
         },
         {
           "id": "the-bell-rings",
           "kind": "story",
-          "stat": "heart",
-          "difficulty": 10,
-          "flavour": "Back in the square, the party fits the clapper into the bell. The whole village watches in silence.",
-          "prompt": {
-            "text": "Say one sentence to wake the bell and the village.",
-            "target": "An exclamation or a wish with 'may'.",
-            "example": "May this bell ring for a hundred more years!"
-          },
-          "onGood": "BONG! The bell rings across the valley. The village cheers!",
-          "onBad": "BONG! The bell rings, a little off-key. The village cheers anyway."
+          "flavour": "Back in the square, the party fits the clapper into the bell. The whole village watches in silence, waiting for one voice.",
+          "choices": [
+            {
+              "id": "wish-out-loud",
+              "label": "Wish out loud",
+              "stat": "heart",
+              "difficulty": 10,
+              "text": "Say one sentence to wake the bell and the village.",
+              "target": "A wish with 'may'.",
+              "example": "May this bell ring for a hundred more years!",
+              "onGood": "BONG! The bell rings across the valley. The village cheers!",
+              "onBad": "BONG! The bell rings, a little off-key. The village cheers anyway."
+            },
+            {
+              "id": "shout-the-promise",
+              "label": "Shout the promise",
+              "stat": "heart",
+              "difficulty": 12,
+              "text": "Shout the promise from the very first scene, all together.",
+              "target": "A promise sentence with 'we will'.",
+              "example": "We will never let the bell be silent again!",
+              "onGood": "BONG! The bell rings loud and true. The whole class is the hero!",
+              "onBad": "BONG! The bell rings, a little shy, then grows stronger."
+            },
+            {
+              "id": "name-the-village",
+              "label": "Name the village",
+              "stat": "heart",
+              "difficulty": 9,
+              "text": "Say one kind sentence about Bellingham.",
+              "target": "A sentence with an adjective before a noun.",
+              "example": "This brave little village deserves its bell.",
+              "onGood": "BONG! The bell rings, and the village smiles for the first time in a century.",
+              "onBad": "BONG! The bell rings once, then twice, then happily."
+            }
+          ]
         }
       ]
     }

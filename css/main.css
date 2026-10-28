@@ -25,9 +25,10 @@
 html, body { margin: 0; padding: 0; height: 100%; }
 
 body {
-  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  font-family: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
   background: var(--bg);
   color: var(--bone);
+  font-size: 16px;
 }
 
 button {
@@ -214,8 +215,21 @@ h1, h2, h3 { color: var(--gold); font-weight: 700; }
   src: url("../assets/fonts/VT323-Regular.ttf") format("truetype");
   font-display: swap;
 }
-:root { --font-head: "Press Start 2P", monospace; --font-body: "VT323", "Segoe UI", monospace; }
-/* Pixel font is for the logo/titles ONLY; headings and panel text use VT323. */
+:root { --font-head: "Press Start 2P", monospace; --font-body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif; }
+/* Atkinson Hyperlegible (OFL, self-hosted) is the readable body font;
+   Press Start 2P stays for the logo/titles only. */
+@font-face {
+  font-family: "Atkinson Hyperlegible";
+  src: url("../assets/fonts/AtkinsonHyperlegible-Regular.ttf") format("truetype");
+  font-display: swap;
+}
+@font-face {
+  font-family: "Atkinson Hyperlegible";
+  font-weight: 700;
+  src: url("../assets/fonts/AtkinsonHyperlegible-Bold.ttf") format("truetype");
+  font-display: swap;
+}
+/* Pixel font is for the logo/titles ONLY; headings and panel text use the body font. */
 .title-logo, .app-title, .big-title { font-family: var(--font-head); }
 h1, h2, h3, .room-name, .ename, .actor-name, .prompt, .gm-hint { font-family: var(--font-body); font-weight: 700; }
 body, button, input, select, textarea, .window, .muted, .log-entry { font-family: var(--font-body); }
@@ -304,3 +318,67 @@ body, button, input, select, textarea, .window, .muted, .log-entry { font-family
 .battle-party .party-slot.acting { outline: 2px solid var(--gold); outline-offset: 2px; }
 .party-slot { image-rendering: pixelated; }
 .typewriter-wrap { position: absolute; left: 2%; right: 2%; top: 2%; font-family: var(--font-body); font-size: calc(28px * var(--ss)); color: var(--bone); background: #0008; padding: calc(6px * var(--ss)) calc(10px * var(--ss)); border: 2px solid var(--panel-line); z-index: 2; }
+
+/* ============ PART 1B: step bar ============ */
+.step-bar {
+  position: absolute; top: 0; left: 0; right: 0; z-index: 20;
+  display: flex; justify-content: center; gap: 8px;
+  background: var(--bg2); border-bottom: 2px solid var(--panel-line);
+  padding: 4px 8px;
+}
+.step-bar .step {
+  font-family: var(--font-body); font-weight: 700;
+  color: var(--bone-dim); padding: 2px 10px; border: 2px solid var(--panel-line);
+}
+.step-bar .step.current { color: var(--bg); background: var(--gold); border-color: var(--gold); }
+.step-bar .step.done { color: var(--moss); border-color: var(--moss); }
+/* GM step bar (in-flow) */
+.gm .step-bar { position: static; justify-content: flex-start; margin-bottom: 8px; }
+
+/* ============ PART 1B: story layout ============ */
+.story { position: absolute; inset: 0; display: flex; flex-direction: column; }
+.story-top {
+  display: flex; justify-content: space-between; align-items: center;
+  background: #1b1713; border-bottom: 2px solid var(--panel-line);
+  padding: calc(10px * var(--ss)) calc(16px * var(--ss));
+}
+.story-title { font-family: var(--font-body); font-weight: 700; color: var(--gold); font-size: calc(32px * var(--ss)); }
+.story-path { font-family: var(--font-body); color: var(--bone-dim); font-size: calc(28px * var(--ss)); }
+.story-scene {
+  flex: 1; position: relative; display: flex; align-items: center; justify-content: center; gap: calc(24px * var(--ss));
+  background: linear-gradient(#241f19, #1b1713);
+}
+.story-hero { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.story-hero .pname-tag { font-family: var(--font-body); font-weight: 700; color: var(--bone); font-size: calc(28px * var(--ss)); background: #0008; padding: 2px 8px; }
+.approach-cards { display: flex; gap: calc(16px * var(--ss)); }
+.approach-card {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  background: var(--panel); border: 2px solid var(--bone-frame); outline: 2px solid var(--panel-line); outline-offset: -4px;
+  padding: calc(10px * var(--ss)); width: calc(220px * var(--ss)); min-height: calc(120px * var(--ss));
+}
+.approach-num { font-family: var(--font-body); font-weight: 700; color: var(--gold); font-size: calc(36px * var(--ss)); }
+.approach-label { font-family: var(--font-body, var(--font-body)); font-weight: 700; color: var(--bone); font-size: calc(36px * var(--ss)); text-align: center; }
+.approach-stat { font-family: var(--font-body); color: var(--bone-dim); font-size: calc(28px * var(--ss)); }
+.story-roll { display: flex; flex-direction: column; align-items: center; gap: calc(12px * var(--ss)); }
+.d20-face.d20-big { width: calc(160px * var(--ss)); height: calc(160px * var(--ss)); font-size: calc(72px * var(--ss)); }
+.spark-count { font-family: var(--font-body); font-weight: 700; color: var(--gold); font-size: calc(44px * var(--ss)); }
+.story-dialogue {
+  border-top: 3px solid var(--gold); background: var(--panel);
+  padding: calc(14px * var(--ss)) calc(20px * var(--ss));
+  min-height: calc(120px * var(--ss));
+  font-family: var(--font-body); color: var(--bone); font-size: calc(44px * var(--ss));
+}
+.story-dialogue .typewriter, .story-dialogue .typewriter-caret { font-size: calc(44px * var(--ss)); }
+
+/* ============ PART 1B: GM primary / approaches / tools ============ */
+.gm .primary-step-wrap { margin: 10px 0; }
+.gm .primary-step { font-size: 20px; padding: 10px 18px; }
+.gm .disabled-reason { margin-left: 8px; }
+.gm .approach-btn { display: block; width: 100%; text-align: left; margin: 4px 0; font-size: 20px; }
+.gm .tools { margin-top: 12px; }
+.gm .tools summary { font-size: 18px; cursor: pointer; color: var(--gold); }
+.gm h2, .gm h3 { font-size: 22px; }
+.gm .gm-hint { font-size: 20px; }
+.gm .muted, .gm .label, .gm p, .gm .player-row, .gm .pa-row, .gm button:not(.primary-step):not(.approach-btn) { font-size: 20px; }
+.gm input, .gm select, .gm textarea { font-size: 18px; }
+.gm .bar-label { font-size: 14px; line-height: 12px; }

@@ -75,6 +75,7 @@ function bootSingle() {
 
   const openBtn = document.getElementById("gm-drawer-open");
   const closeBtn = document.getElementById("gm-drawer-close");
+  const popStage = document.getElementById("gm-pop-stage");
   const drawer = document.getElementById("gm-drawer");
   const toggle = (force) => {
     const opening = typeof force === "boolean" ? force : !drawer.classList.contains("open");
@@ -84,6 +85,7 @@ function bootSingle() {
   };
   openBtn.addEventListener("click", () => toggle());
   closeBtn.addEventListener("click", () => toggle(false));
+  if (popStage) popStage.addEventListener("click", () => window.open("stage.html", "_blank"));
 
   window.addEventListener("keydown", (ev) => {
     const key = ev.key.toLowerCase();
