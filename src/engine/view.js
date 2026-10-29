@@ -90,6 +90,7 @@ function buildCards(state, room, showHint) {
 
 function buildParty(state) {
   const exp = state.expedition;
+  if (!exp) return [];
   const activeId = exp.storyActor || exp.activePlayerId;
   const names = new Set(["wizard", "rogue", "warrior", "cleric", "bard", "ranger"]);
   return state.players.map((p) => ({
@@ -107,6 +108,7 @@ function buildParty(state) {
 
 function itemsOf(state) {
   const exp = state.expedition;
+  if (!exp) return [];
   return (exp.items || []).map((it) => (typeof it === "string" ? { id: it, label: it } : it));
 }
 

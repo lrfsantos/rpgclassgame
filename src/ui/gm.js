@@ -41,14 +41,17 @@ export function mountGm(container) {
     const isCombat = s.expedition && s.expedition.roomStatus === "combat";
     if (step === "choose") {
       const n = parseInt(ev.key, 10);
-      if (n >= 1 && n <= 4) {
-        if (isCombat) {
+      if (isCombat) {
+        if (n >= 1 && n <= 4) {
           const b = root.querySelector(`[data-skill-num="${n}"]`);
           if (b && !b.disabled) b.click();
-        } else {
-          const card = root.querySelector(`[data-approach-num="${n}"]`);
-          if (card && !card.disabled) card.click();
         }
+      } else {
+        const letter = ev.key.toUpperCase();
+        let chosen = null;
+        if (n >= 1 && n <= 3) chosen = root.querySelector(`[data-approach-num="${n}"]`);
+        else if (["A", "B", "C"].includes(letter)) chosen = root.querySelector(`[data-approach-key="${letter}"]`);
+        if (chosen && !chosen.disabled) chosen.click();
       }
     } else if (step === "sayit") {
       const isCombat = s.expedition && s.expedition.roomStatus === "combat";
@@ -402,11 +405,12 @@ function renderPlay(s) {
       choose.appendChild(el("h3", {}, "Choose an approach (keys 1-4)"));
       const actorC = s.players.find((p) => p.id === exp.storyActor);
       if (actorC) choose.appendChild(el("p", { class: "muted" }, `Approach as ${actorC.name} (${className(actorC.classId)}):`));
-      view.cards.forEach((c) => {
+      view.cards.forEach((c, i) => {
         choose.appendChild(el("button", {
           "data-action": "choose-approach",
           "data-value": c.id,
-          "data-approach-num": c.key,
+          "data-approach-num": String(i + 1),
+          "data-approach-key": c.key,
           class: "approach-btn",
         }, `${c.key}. ${c.label} — ${classNameStat(c.stat)} (${c.stars})`));
       });

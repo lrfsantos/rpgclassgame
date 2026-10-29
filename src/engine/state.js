@@ -7,6 +7,7 @@ const SCHEMA = 2;
 const HISTORY_LIMIT = 60;
 
 let state = null;
+let monotonicRev = 0; // highest rev ever seen; resets never lower it
 const subscribers = new Set();
 
 export function subscribe(fn) {
@@ -79,6 +80,7 @@ export function publishable() {
 
 function bumpRev() {
   state.rev = (state.rev || 0) + 1;
+  if (state.rev > monotonicRev) monotonicRev = state.rev;
 }
 
 // Stage side: receive the save key from another page (same origin).
@@ -116,7 +118,7 @@ export function load() {
 export function newGameState() {
   return {
     schema: SCHEMA,
-    rev: 0,
+    rev: monotonicRev,
     phase: "lobby",
     players: [],
     expedition: null,
@@ -129,6 +131,7 @@ export function newGameState() {
 export function init() {
   const saved = load();
   state = saved ? Object.assign(newGameState(), saved, { history: [] }) : newGameState();
+  if (state.rev > monotonicRev) monotonicRev = state.rev;
   emit();
   return state;
 }

@@ -43,4 +43,6 @@
 - Step D: narrow screens (max-width 720px) stack the drawer under the stage instead of beside it (single-window still usable on a phone/tablet as a fallback).
 - Step D: visible version badge "v2.1.0" (index drawer header + gm.html footer) so stale GitHub Pages cache is diagnosable; cache busting via version string, no service worker yet (offline deferred).
 - Step D: README.md rewritten for the current build (episodes, tests, subpath, layout); CONTENT_GUIDE.md (how to edit content incl. episodes) and CREDITS.md (OFL fonts logged) added.
+- M1: state has a monotonic rev; broadcast+save exclude history (D14); Stage ingests via BroadcastChannel + storage event, popup reused by fixed name (D9).
+- M2: src/engine/view.js is the single view source (getView/getStageView); Stage never reads the log; audio/typewriter only on (step,scene,rev) change (D3/D8/D11).
 

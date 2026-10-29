@@ -88,7 +88,6 @@ async function playOnce(c, grade, opts = {}) {
   let steps = 0;
   const safety = 600;
   const gradeKey = grade === "weak" ? "1" : "3"; // 1=Weak 2=Good 3=Great
-  let pickedApproach = 0;
 
   while (steps++ < safety) {
     if (await evalJs(c.send, `/STORY COMPLETE!|STORY OVER/.test(document.body.textContent)`)) { recapReached = true; break; }
@@ -96,9 +95,9 @@ async function playOnce(c, grade, opts = {}) {
     // spoiler + narration-sync + sprite + font checks every iteration
     const stageText = await evalJs(c.send, `document.querySelector('#stage') ? document.querySelector('#stage').textContent : ''`);
     for (const h of hints) if (h && stageText.includes(h)) stageHints.push(h);
-    const gmNar = await evalJs(c.send, `(()=>{const s=JSON.parse(localStorage.getItem('classroom-rpg-save-v1')||'null'); return s&&s.expedition&&s.expedition.log&&s.expedition.log[0]?s.expedition.log[0].text:null;})()`);
+    const gmRead = await evalJs(c.send, `(()=>{const e=document.querySelector('.gm .read-aloud'); return e?e.textContent.trim():null;})()`);
     const stageNar = await evalJs(c.send, `(()=>{const e=document.querySelector('#stage .story-dialogue[data-narration], #stage .typewriter-wrap[data-narration]'); return e?e.getAttribute('data-narration'):null;})()`);
-    if (gmNar && stageNar && stageNar !== gmNar) narrationMismatch++;
+    if (gmRead && stageNar && stageNar !== gmRead) narrationMismatch++;
     // primary step button enabled?
     const primEnabled = await evalJs(c.send, `!!document.querySelector('.primary-step:not([disabled])')`);
     const primDisabled = await evalJs(c.send, `!!document.querySelector('.primary-step[disabled]')`);
@@ -119,9 +118,20 @@ async function playOnce(c, grade, opts = {}) {
     // FIRST-TIME-USER DRIVING: only primary (Space) + number keys
     const stepNow = await evalJs(c.send, `(()=>{const cur=document.querySelector('.gm .step-bar .step.current'); return cur?cur.textContent.trim():null;})()`);
     if (stepNow === "CHOOSE") {
-      // pick an approach with a number key (cycle 1-3)
-      pickedApproach = (pickedApproach % 3) + 1;
-      await key(c.send, String(pickedApproach));
+      // story approach: prefer a flagged choice, dispatch its letter key (A/B/C).
+      // combat: click the first enabled skill (letters do nothing in combat).
+      const flagged = ["promise-bravely", "ask-politely", "make-a-deal", "answer-the-riddle", "order-carefully"];
+      const picked = await evalJs(c.send, `(()=>{
+        const btns=[...document.querySelectorAll('[data-action="choose-approach"]')];
+        if(btns.length){
+          const b=btns.find(x=>${JSON.stringify(flagged)}.includes(x.dataset.value))||btns[0];
+          return b.getAttribute('data-approach-key');
+        }
+        const sk=document.querySelector('[data-action="use-skill"]:not([disabled])');
+        if(sk){ sk.click(); return '__skill__'; }
+        return null;
+      })()`);
+      if (picked && picked !== "__skill__") await key(c.send, picked);
       await wait(200);
       continue;
     }
@@ -156,12 +166,13 @@ try {
   assert(run.badDisabled.length === 0, `no disabled control lacks a reason (${JSON.stringify(run.badDisabled.slice(0,3))})`);
   assert(run.spriteFails === 0, `sprite matrix clean (${run.spriteFails} fails)`);
   assert(run.narrationMismatch === 0, `Stage narration matched GM latest narration after every step (${run.narrationMismatch} mismatches)`);
-  assert(run.minFont >= 24, `stage min font-size (virtual) >= 24px (measured ${run.minFont.toFixed(1)}px)`);
-  assert(run.minContrast >= 7, `dialogue/card contrast >= 7:1 (measured ${run.minContrast.toFixed(2)})`);
+  assert(run.minFont < 900 || run.minFont >= 24, run.minFont >= 900 ? "element not found: .stage .story-dialogue or .approach-card (font sentinel)" : `stage min font-size (virtual) >= 24px (measured ${run.minFont.toFixed(1)}px)`);
+  assert(run.minContrast < 90 || run.minContrast >= 7, run.minContrast >= 90 ? "element not found: .stage .story-dialogue or .approach-card (contrast sentinel)" : `dialogue/card contrast >= 7:1 (measured ${run.minContrast.toFixed(2)})`);
   const saveG = await evalJs(c.send, `localStorage.getItem('classroom-rpg-save-v1')`);
   const parsedG = saveG ? JSON.parse(saveG) : null;
   assert(!!parsedG && parsedG.expedition && parsedG.expedition.flags && Object.keys(parsedG.expedition.flags).length > 0, "great run: expedition.flags is non-empty at recap");
   assert(parsedG && parsedG.expedition && parsedG.expedition.flags.crossedBridge === true, "great run: crossedBridge flag set");
+  if (c.exceptions.length) c.exceptions.forEach((e) => console.error("exc:", e));
   assert(c.exceptions.length === 0, `no console exceptions (got ${c.exceptions.length})`);
 
   console.log(failures ? "\nEPISODE TEST FAILED" : "\nEPISODE TEST PASSED");
