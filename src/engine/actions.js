@@ -231,6 +231,8 @@ export function startEpisode(episodeId) {
     s.expedition.npcId = null;
     s.expedition.mode = "episode";
     s.expedition.flags = {};
+    s.expedition.items = [];
+    s.expedition.outcome = null;
     s.expedition.step = "listen";
     s.expedition.storyChoices = null;
     s.expedition.storyChoiceId = null;
@@ -259,13 +261,61 @@ export function storyContinue() {
       exp.step = "choose";
       log(s, `${playerById(s, exp.storyActor).name} picks the approach.`, "system");
     } else if (exp.step === "roll" && exp.roomStatus === "story") {
-      applyStoryOutcome(s);
-      exp.step = "result";
+      doStoryRoll(s);
     } else if (exp.step === "result" || ["cleared", "defeat"].includes(exp.roomStatus)) {
       advanceAfterRoom(s, "cleared");
     }
     return s;
   });
+}
+
+// ROLL action: the d20 decides the story outcome (D4). English only raised the
+// odds. forceD20 is for tests (rollStory(20) / rollStory(1) deterministic).
+export function rollStory(forceD20) {
+  return mutate((s) => {
+    const exp = s.expedition;
+    if (!exp || exp.mode !== "episode" || exp.roomStatus !== "story" || exp.step !== "roll") return s;
+    doStoryRoll(s, forceD20);
+    exp.step = "result";
+    return s;
+  });
+}
+
+// Shared internals: resolves the d20, records the outcome (text/item/bridge),
+// applies Spark at roll time and advances past the story room. Never calls
+// mutate (callers already hold a state snapshot).
+function doStoryRoll(s, forceD20) {
+  const exp = s.expedition;
+  resolveStoryRoll(s, forceD20);
+  const r = exp.lastRoll;
+  if (!r) return;
+  const room = currentRoom(s);
+  const choice = (room.event.choices || []).find((c) => c.id === exp.storyChoiceId) || {};
+  let text = r.success ? choice.onGood : choice.onBad;
+  if (r.crit) text = (text || "") + " " + pickNarration(s, "crit", {});
+  else if (r.fumble) text = (text || "") + " " + pickNarration(s, "fumble", {});
+  let item = null;
+  if (r.success && (choice.grants || choice.flag)) {
+    const flag = choice.grants ? choice.grants.flag : choice.flag;
+    const label = choice.grants && choice.grants.label ? choice.grants.label : flag;
+    exp.flags[flag] = true;
+    item = { flag, label };
+    if (!exp.items) exp.items = [];
+    exp.items.push(item);
+  }
+  exp.outcome = { success: r.success, crit: r.crit, fumble: r.fumble, text: text || "", item, bridge: room.bridge || "" };
+  // Spark at roll time (D4): +4 success, +6 crit, +1 otherwise.
+  if (r.success) {
+    s.party.score += (r.crit ? 6 : 4);
+    log(s, `Spark +${r.crit ? 6 : 4} — the story moves forward.`, "challenge");
+  } else {
+    s.party.score += 1;
+    log(s, `Spark +1 — a stumble, but the story continues.`, "challenge");
+  }
+  exp.roomStatus = "cleared";
+  exp.activePlayerId = null;
+  exp.actionPhase = "idle";
+  exp.challengeIndex += 1;
 }
 
 // CHOOSE: pick one approach card (keys 1-4). Sets the pending roll.
@@ -294,34 +344,28 @@ export function chooseStoryApproach(choiceId) {
   });
 }
 
-// SAY IT: teacher grades Weak(0)/Good(2)/Great(4) with keys 1/2/3. Rolls the d20.
+// SAY IT: teacher grades Weak(0)/Good(2)/Great(4) with keys 1/2/3. English only
+// raises the odds; the d20 decides success at the ROLL step (D4).
 export function gradeStory(bonus) {
   return mutate((s) => {
     const exp = s.expedition;
     if (!exp || exp.mode !== "episode" || exp.roomStatus !== "story" || exp.step !== "sayit") return s;
     exp.langBonus = bonus;
     exp.langPrompt = null;
-    const room = currentRoom(s);
-    const choice = (room.event.choices || []).find((c) => c.id === exp.storyChoiceId) || {};
-    const actor = playerById(s, exp.pending.playerId);
-    const good = bonus >= 2;
-    if (choice.onGood && good) log(s, choice.onGood, "challenge");
-    else if (choice.onBad && !good) log(s, choice.onBad, "challenge");
-    if (good && choice.flag) exp.flags[choice.flag] = true;
-    // roll the d20 (shown during ROLL step)
-    resolveStoryRoll(s);
+    exp.lastRoll = null;
+    exp.outcome = null;
     exp.step = "roll";
     return s;
   });
 }
 
-function resolveStoryRoll(s) {
+function resolveStoryRoll(s, forceD20) {
   const exp = s.expedition;
   const p = exp.pending;
   if (!p) return;
   const actor = playerById(s, p.playerId);
   const dice = new Dice(newSeed());
-  const d20 = dice.roll(20);
+  const d20 = forceD20 != null ? forceD20 : dice.roll(20);
   const mod = statMod(actor, p.stat);
   const total = d20 + mod + exp.langBonus + exp.assistBonus;
   const crit = d20 === 20;
@@ -332,23 +376,6 @@ function resolveStoryRoll(s) {
   if (crit) log(s, `${verb} - CRIT! ${pickNarration(s, "crit", {})}`, "combat");
   else if (fumble) log(s, `${verb} - ${pickNarration(s, "fumble", {})}`, "combat");
   else log(s, `${verb} - ${success ? "success!" : "fail."}`, "combat");
-}
-
-function applyStoryOutcome(s) {
-  const exp = s.expedition;
-  const r = exp.lastRoll;
-  if (!r) return;
-  if (r.success) {
-    s.party.score += (r.crit ? 6 : 4);
-    log(s, `Spark +${r.crit ? 6 : 4} — the story moves forward.`, "challenge");
-  } else {
-    s.party.score += 1;
-    log(s, `Spark +1 — a stumble, but the story continues.`, "challenge");
-  }
-  exp.roomStatus = "cleared";
-  exp.activePlayerId = null;
-  exp.actionPhase = "idle";
-  exp.challengeIndex += 1;
 }
 
 function maybeAddNpc(s) {
@@ -381,11 +408,13 @@ function enterCurrentRoom(s) {
   s.expedition.assistBonus = 0;
   s.expedition.assistUsed = [];
   s.expedition.lastRoll = null;
+  s.expedition.outcome = null;
   // reset story-scene state so a combat/other room never shows stale cards
   s.expedition.storyChoices = null;
   s.expedition.storyChoiceId = null;
   s.expedition.storyActor = null;
   s.expedition.storyDiffBonus = 0;
+  s.expedition.scenePromptDone = false;
 
   // episode conditional scenes: resolve difficulty/flavour from flags at entry
   if (ev.conditional) {
@@ -561,12 +590,18 @@ function applyAction(s, playerId, skillId, opts = {}) {
     resolveRoll(s, exp.langBonus, exp.assistBonus, opts.forceD20 || null);
   } else {
     exp.actionPhase = "acting";
-    exp.langPrompt = currentRoom(s).event.scenePrompt || pickLangPrompt(s);
-    exp.langBonus = 0;
+    const scenePrompt = currentRoom(s).event.scenePrompt;
+    if (scenePrompt && !exp.scenePromptDone) {
+      exp.scenePromptDone = true;
+      exp.langPrompt = scenePrompt;
+      exp.lastAction.wasScenePrompt = true;
+    } else {
+      exp.langPrompt = pickLangPrompt(s);
+      exp.lastAction.wasScenePrompt = false;
+    }
     log(s, `Say it! ${exp.langPrompt.text}`, "language");
   }
 }
-
 export function chooseAction(playerId, skillId) {
   return mutate((s) => {
     const exp = s.expedition;
@@ -591,9 +626,9 @@ export function judgeLanguage(bonus) {
     const actor = playerById(s, exp.pending.playerId);
     const key = bonus >= 4 ? "languageGood" : bonus >= 2 ? "languageMid" : "languageWeak";
     log(s, pickNarration(s, key, { player: actor.name }), "language");
-    // episode story scenes: the English grade decides the narrated outcome + flags
-    // (applies to story AND combat scenes that carry an onGood/onBad outcome)
-    {
+    // episode combat scene onGood/onBad + flags fire ONCE, on the action that
+    // carried the scene prompt (D6). Later actions in the same room use random prompts.
+    if (exp.lastAction && exp.lastAction.wasScenePrompt) {
       const room = currentRoom(s);
       const scene = room.event.scene;
       const good = bonus >= 2;
@@ -611,9 +646,14 @@ export function judgeLanguage(bonus) {
 export function grantAssist(assisterId) {
   return mutate((s) => {
     const exp = s.expedition;
-    if (!exp || exp.actionPhase !== "acting" || !exp.pending) return s;
+    if (!exp || !exp.pending) return s;
+    // combat/challenge/trap use actionPhase "acting"; story uses step "sayit"/"roll"
+    const story = exp.mode === "episode" && exp.roomStatus === "story" && (exp.step === "sayit" || exp.step === "roll");
+    const acting = exp.actionPhase === "acting" || story;
+    if (!acting) return s;
     if (exp.assistBonus >= 2 || exp.assistUsed.includes(assisterId)) return s;
-    if (assisterId === exp.activePlayerId) return s;
+    const actorId = story ? exp.storyActor : exp.activePlayerId;
+    if (assisterId === actorId) return s;
     const a = playerById(s, assisterId);
     if (!a || a.npc) return s;
     // dazed players may still assist (they just cannot act)

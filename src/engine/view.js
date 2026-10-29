@@ -117,13 +117,15 @@ export function getView(state) {
   const phase = state.phase;
   const room = currentRoom(state);
   const ev = room && room.event ? room.event : {};
-  const isStory = exp && exp.mode === "episode" && exp.roomStatus === "story";
+  const isStory = exp && exp.mode === "episode" && ev && ev.type === "story";
   const step = currentStep(state) || "listen";
   const sceneIndex = exp ? exp.current : 0;
   const sceneCount = exp && exp.rooms ? exp.rooms.length : 0;
   const showHints = state.settings && state.settings.startersOnStage !== false;
 
-  const read = isStory ? (ev.read || room.flavour || "") : (ev.scenePrompt && ev.scenePrompt.text ? ev.scenePrompt.text : (room && room.flavour) || "");
+  const read = isStory
+    ? (step === "result" && exp.outcome ? (exp.outcome.text || "") + (exp.outcome.bridge ? " " + exp.outcome.bridge : "") : (ev.read || room.flavour || ""))
+    : (ev.scenePrompt && ev.scenePrompt.text ? ev.scenePrompt.text : (room && room.flavour) || "");
 
   let ask = "";
   if (step === "sayit" && exp.langPrompt && exp.langPrompt.text) ask = exp.langPrompt.text;
@@ -187,11 +189,13 @@ export function getView(state) {
     spark: state.party ? state.party.score : 0,
     assistBonus: exp ? exp.assistBonus || 0 : 0,
     assistUsed: exp ? exp.assistUsed || [] : [],
-    roll,
+    roll: step === "roll" ? null : roll,
+    outcome: exp && exp.outcome ? { success: exp.outcome.success, crit: exp.outcome.crit, fumble: exp.outcome.fumble, text: exp.outcome.text, item: exp.outcome.item, bridge: exp.outcome.bridge } : null,
     hints,
     tip,
     mode: exp ? exp.mode : null,
     roomStatus: exp ? exp.roomStatus : null,
+    isStory,
     phase,
     sceneIndex,
     sceneCount,

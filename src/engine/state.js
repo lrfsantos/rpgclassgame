@@ -8,6 +8,7 @@ const HISTORY_LIMIT = 60;
 
 let state = null;
 let monotonicRev = 0; // highest rev ever seen; resets never lower it
+let sessionId = null; // random session id, fixed for the life of the page
 const subscribers = new Set();
 
 export function subscribe(fn) {
@@ -71,11 +72,21 @@ export function save() {
   }
 }
 
-// State without history: safe to broadcast and persist.
+// State without history: safe to broadcast and persist. Carries the page's
+// session id so a Stage that saw a different session (e.g. after the GM reloads
+// with cleared storage) can accept it and reset its rev baseline (D15).
 export function publishable() {
   const s = clone(state);
   delete s.history;
+  if (!s.session) s.session = getSessionId();
   return s;
+}
+
+export function getSessionId() {
+  if (!sessionId) {
+    sessionId = Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 6);
+  }
+  return sessionId;
 }
 
 function bumpRev() {

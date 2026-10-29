@@ -103,6 +103,90 @@ assert(stepsSeen.listen > 0 && stepsSeen.choose > 0 && stepsSeen.sayit > 0 && st
 // every story scene produced a CHOOSE at least once
 assert(stepsSeen.choose >= (s.expedition.mode === "episode" ? 5 : 1), "saw CHOOSE in the story scenes (got " + stepsSeen.choose + ")");
 
+// ---- M3a D4/D5 invariants: deterministic branches via rollStory(20)/rollStory(1) ----
+function freshEpisode() {
+  stateMod.reset();
+  actions.setSettings({ languageCheck: "off" });
+  for (let i = 0; i < 4; i++) actions.addPlayer();
+  s = stateMod.getState();
+  s.players.forEach((p, i) => actions.setPlayerClass(p.id, classes[i % classes.length].id));
+  actions.startEpisode(ep.id);
+}
+function toRollStep() {
+  let n = 0;
+  while (n++ < 20) {
+    s = stateMod.getState();
+    const v = getView(s);
+    if (expIsStoryAt(s, "roll")) return v;
+    if (expIsStoryAt(s, "listen")) actions.storyContinue();
+    else if (expIsStoryAt(s, "choose")) actions.chooseStoryApproach(v.cards[0].id);
+    else if (expIsStoryAt(s, "sayit")) actions.gradeStory(2);
+    else actions.storyContinue();
+  }
+  return null;
+}
+function expIsStoryAt(s, step) {
+  return s.expedition.mode === "episode" && s.expedition.roomStatus === "story" && s.expedition.step === step;
+}
+
+// rollStory(20): guaranteed crit/success — outcome = onGood, no outcome text at ROLL, Spark +6
+freshEpisode();
+let v = toRollStep();
+assert(v && v.step === "roll", "deterministic setup reached ROLL");
+assert(v.roll === null, "at ROLL the view exposes no roll (dice have their own moment)");
+assert(!v.read.includes("onGood") && !v.read.includes("onBad"), "at ROLL read has no outcome text");
+const beforeSpark = stateMod.getState().party.score;
+actions.grantAssist(stateMod.getState().players.find((p) => p.id !== stateMod.getState().expedition.pending.playerId && !p.npc).id);
+actions.rollStory(20);
+s = stateMod.getState();
+v = getView(s);
+assert(v.step === "result", "after rollStory(20) the step is RESULT");
+assert(v.outcome && v.outcome.success === true, "rollStory(20) outcome.success true");
+assert(v.outcome && v.outcome.text && v.outcome.text.length > 0, "rollStory(20) outcome.text set (onGood)");
+assert(s.party.score === beforeSpark + 6, "rollStory(20) applied Spark +6 (got " + (s.party.score - beforeSpark) + ")");
+assert(v.roll && v.roll.assistBonus >= 1, "assist given before the roll shows in the breakdown");
+
+// rollStory(1): guaranteed fumble/fail — outcome = onBad, no item, Spark +1
+freshEpisode();
+v = toRollStep();
+assert(v && v.step === "roll", "deterministic setup reached ROLL (second)");
+const itemsBefore = (stateMod.getState().expedition.items || []).length;
+const sparkBefore = stateMod.getState().party.score;
+actions.rollStory(1);
+s = stateMod.getState();
+v = getView(s);
+assert(v.outcome && v.outcome.success === false, "rollStory(1) outcome.success false");
+assert(v.outcome && v.outcome.text && v.outcome.text.length > 0, "rollStory(1) outcome.text set (onBad)");
+assert((stateMod.getState().expedition.items || []).length === itemsBefore, "rollStory(1) added no item");
+assert(s.party.score === sparkBefore + 1, "rollStory(1) applied Spark +1 (got " + (s.party.score - sparkBefore) + ")");
+
+// assist cap +2: two different assisters cap the bonus, a third is ignored
+freshEpisode();
+v = toRollStep();
+assert(v && v.step === "roll", "deterministic setup reached ROLL (third)");
+s = stateMod.getState();
+const humans = s.players.filter((p) => !p.npc && p.id !== s.expedition.pending.playerId);
+actions.grantAssist(humans[0].id);
+actions.grantAssist(humans[1].id);
+actions.grantAssist(humans[0].id); // repeat ignored
+actions.grantAssist(humans.length > 2 ? humans[2].id : humans[0].id);
+s = stateMod.getState();
+assert(s.expedition.assistBonus === 2, "assist cap is +2 (got " + s.expedition.assistBonus + ")");
+
+// drive to the end so the currentStep assertion still holds
+let n2 = 0;
+while (n2++ < 40) {
+  s = stateMod.getState();
+  if (s.phase !== "expedition") break;
+  v = getView(s);
+  if (expIsStoryAt(s, "listen")) actions.storyContinue();
+  else if (expIsStoryAt(s, "choose")) actions.chooseStoryApproach(v.cards[0].id);
+  else if (expIsStoryAt(s, "sayit")) actions.gradeStory(2);
+  else if (expIsStoryAt(s, "roll")) actions.rollStory(10);
+  else if (expIsStoryAt(s, "result")) actions.storyContinue();
+  else actions.storyContinue();
+}
+
 // view.mjs also powers currentStep used by both UIs
 assert(currentStep(stateMod.getState()) === "result" || currentStep(stateMod.getState()) === null, "currentStep defined at end (victory => result-ish)");
 

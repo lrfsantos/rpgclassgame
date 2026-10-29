@@ -45,4 +45,5 @@
 - Step D: README.md rewritten for the current build (episodes, tests, subpath, layout); CONTENT_GUIDE.md (how to edit content incl. episodes) and CREDITS.md (OFL fonts logged) added.
 - M1: state has a monotonic rev; broadcast+save exclude history (D14); Stage ingests via BroadcastChannel + storage event, popup reused by fixed name (D9).
 - M2: src/engine/view.js is the single view source (getView/getStageView); Stage never reads the log; audio/typewriter only on (step,scene,rev) change (D3/D8/D11).
+- M3a: narration depends on the roll - English (graded) only raises the odds; the ROLL step's d20 decides success/outcome; Spark at roll time (+4/+6/+1); items gained on success; assists (+1, max +2) also work in story sayit/roll steps.
 

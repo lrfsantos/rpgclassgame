@@ -62,7 +62,14 @@ function bootStage() {
 
 function applyIfNewer(s) {
   const cur = state.getState();
-  if (!cur || cur.rev === undefined || s.rev === undefined || s.rev >= cur.rev) {
+  if (!cur || cur.rev === undefined || s.rev === undefined) return;
+  // different session = the GM restarted fresh (storage cleared); accept it and
+  // drop the old rev baseline so the Stage stops ignoring a lower-rev state (D15)
+  if (cur.session && s.session && cur.session !== s.session) {
+    if (s && s.schema === 2) state.ingest(s);
+    return;
+  }
+  if (s.rev >= cur.rev) {
     // Keep schema guard: stage only ingests states it understands.
     if (s && s.schema === 2) state.ingest(s);
   }

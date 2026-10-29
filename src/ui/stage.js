@@ -62,6 +62,9 @@ function render() {
   const state = getState();
   if (!rootEl) return;
   measureStage();
+  rootEl.innerHTML = "";
+  if (state.phase === "lobby") { rootEl.appendChild(renderTitle(state)); return; }
+  if (state.phase === "victory" || state.phase === "defeated") { rootEl.appendChild(renderRecap(state)); return; }
   const v = getStageView(state);
   // fire one-shot effects only when the step, scene or revision changed (D8)
   const fxKey = v.step + "|" + v.sceneIndex + "|" + (state.rev || 0);
@@ -73,9 +76,6 @@ function render() {
     }
     lastFx = { key: fxKey, step: v.step, scene: v.sceneIndex, rev: state.rev || 0 };
   }
-  rootEl.innerHTML = "";
-  if (state.phase === "lobby") { rootEl.appendChild(renderTitle(state)); return; }
-  if (state.phase === "victory" || state.phase === "defeated") { rootEl.appendChild(renderRecap(state)); return; }
   rootEl.appendChild(renderPlay(v, state));
 }
 
@@ -120,7 +120,7 @@ function renderTitle(s) {
 
 // ---------- Play ----------
 function renderPlay(v, s) {
-  if (v.roomStatus === "story") return renderStory(v, s);
+  if (v.isStory) return renderStory(v, s);
   return renderCombat(v, s);
 }
 

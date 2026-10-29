@@ -363,6 +363,19 @@ try {
     const stageStillLive = await waitFor(stageX, `!!document.querySelector('#stage .title-screen') || /No players yet/.test(document.body.textContent)`, 4000);
     assert(stageStillLive, label + ": Stage still live after Delete save");
 
+    // ---- D15: GM reload with cleared storage = new session; Stage must follow ----
+    await gmX.eval(`localStorage.removeItem('classroom-rpg-save-v1'); true`);
+    await cG.send("Page.navigate", { url: gmUrl });
+    await wait(600);
+    await waitFor(gmX, `!!document.querySelector('[data-action="quick-add-4"]')`, 6000);
+    await gmX.eval(`document.querySelector('[data-action="quick-add-4"]').click()`);
+    await waitFor(gmX, `document.querySelectorAll('.player-row').length >= 4`, 6000);
+    // Stage should accept the new session (different id, lower rev) and show lobby
+    const stageAfterReload = await waitFor(stageX, `!!document.querySelector('#stage .title-screen') || /No players yet/.test(document.body.textContent)`, 4000);
+    assert(stageAfterReload, label + ": Stage accepted the new GM session after reload (shows lobby/title)");
+    const gmSession = await gmX.eval(`(()=>{const p=JSON.parse(localStorage.getItem('classroom-rpg-save-v1')); return p?p.session:null;})()`);
+    assert(!!gmSession, label + ": published state carries a session id (got " + gmSession + ")");
+
     phase3Ok.push(label);
     phase3Latency.push(...lat);
     return actions;

@@ -239,7 +239,7 @@ function primaryLabel(s) {
   if (step === "listen") return { text: "Continue", reason: null };
   if (step === "choose") return isCombat ? { text: "Attack (free) — or pick a skill (1-4)", reason: null } : { text: "Pick an approach (1-4)", reason: null };
   if (step === "sayit") return isCombat ? { text: "Grade the answer (1=Weak 2=Good 3=Great)", reason: "Choose a grade" } : { text: "Grade the answer (1=Weak 2=Good 3=Great)", reason: "Choose a grade" };
-  if (step === "roll") return { text: "See the result", reason: null };
+  if (step === "roll") return { text: "Roll d20", reason: null };
   if (step === "result") return { text: "Next scene", reason: null };
   return null;
 }
@@ -261,7 +261,7 @@ function nextHint(s) {
   if (step === "listen") return "The class is listening. Press Continue (Space) when ready.";
   if (step === "choose") return "The class picks an approach. Number keys 1-4.";
   if (step === "sayit") return "The class speaks. Grade it: 1=Weak, 2=Good, 3=Great.";
-  if (step === "roll") return "The d20 is rolling. Press Continue (Space) to see the result.";
+  if (step === "roll") return "The class spoke. Press Space to roll the d20.";
   if (step === "result") return "Outcome shown. Press Continue (Space) for the next scene.";
   return "Advance when ready.";
 }
@@ -468,8 +468,10 @@ function renderPlay(s) {
     body.appendChild(el("div", { class: "window" }, "Outcome shown on the Stage. Press Next scene to continue."));
   }
 
-  // assists (during sayit/acting, other players can add to the story)
-  if (exp.actionPhase === "acting" && exp.pending && exp.pending.playerId) {
+  // assists (during sayit/acting, other players can add to the story) — episode
+  // story sayit/roll too (D5)
+  const assistStep = (exp.actionPhase === "acting" && exp.pending && exp.pending.playerId) || (exp.mode === "episode" && exp.roomStatus === "story" && (step === "sayit" || step === "roll") && exp.pending && exp.pending.playerId);
+  if (assistStep) {
     const others = s.players.filter((p) => p.id !== exp.pending.playerId && !p.npc);
     if (others.length) {
       const ass = el("div", { class: "window" });
