@@ -1,8 +1,10 @@
-// Stage view (v2 + B1.5 + PART 1B): fixed 16:9 virtual canvas, letterboxed,
-// integer sprite scaling, pixelated. Step bar LISTEN/CHOOSE/SAY IT/ROLL/RESULT,
-// story zones, typewriter dialogue. Read-only, no spoilers, no teacher hints.
+// Stage view (v2 + B1.5 + PART 1B + M2): fixed 16:9 virtual canvas, letterboxed,
+// integer sprite scaling, pixelated. Renders ONLY from getStageView(state) —
+// never reads the expedition log. Side effects (audio, typewriter) fire only on
+// a change of (step, scene, rev), never on resize.
 import { getState, subscribe } from "../engine/state.js";
 import { getContent } from "../engine/content.js";
+import { getStageView } from "../engine/view.js";
 import { loadSprites, mountSprite } from "../engine/sprites.js";
 import * as audio from "../engine/audio.js";
 import { el, bar } from "./util.js";
@@ -20,8 +22,10 @@ function measureStage() {
 function intSpriteScale(base) {
   return Math.max(1, Math.round(base * stageScaleFactor));
 }
-// virtual-px -> CSS px (all stage text scales off the 16:9 box)
 function px(v) { return `calc(${v}px * var(--ss))`; }
+
+// last known step/scene/rev to gate side effects (D8)
+let lastFx = { step: null, scene: -1, rev: -1 };
 
 export async function mountStage(container) {
   rootEl = el("div", { class: "stage" });
@@ -34,13 +38,13 @@ export async function mountStage(container) {
   render();
   subscribe(() => render());
   if (typeof ResizeObserver !== "undefined") {
-    const ro = new ResizeObserver(() => { measureStage(); render(); });
+    const ro = new ResizeObserver(() => { measureStage(); });
     ro.observe(rootEl);
   } else {
     let resizeTimer = null;
     window.addEventListener("resize", () => {
       clearTimeout(resizeTimer);
-      resizeTimer = setTimeout(() => { measureStage(); render(); }, 120);
+      resizeTimer = setTimeout(() => measureStage(), 120);
     });
   }
 }
@@ -50,35 +54,37 @@ function className(id) {
   return c ? c.name : "?";
 }
 
-// Derive the step-bar label from state for ANY mode.
-export function currentStep(s) {
-  const exp = s.expedition;
-  if (!exp) return null;
-  if (exp.mode === "episode" && exp.roomStatus === "story" && exp.step) return exp.step;
-  if (["cleared", "defeat"].includes(exp.roomStatus)) return "result";
-  if (exp.langPrompt) return "sayit";
-  if (exp.lastRoll && exp.actionPhase !== "choosing") return "roll";
-  if (exp.actionPhase === "choosing") return "choose";
-  return "listen";
+function classNameStat(stat) {
+  return { might: "Might", agility: "Agility", mind: "Mind", heart: "Heart" }[stat] || stat;
 }
-const STEPS = ["listen", "choose", "sayit", "roll", "result"];
-const STEP_LABEL = { listen: "LISTEN", choose: "CHOOSE", sayit: "SAY IT", roll: "ROLL", result: "RESULT" };
 
 function render() {
   const state = getState();
   if (!rootEl) return;
   measureStage();
+  const v = getStageView(state);
+  // fire one-shot effects only when the step, scene or revision changed (D8)
+  const fxKey = v.step + "|" + v.sceneIndex + "|" + (state.rev || 0);
+  if (fxKey !== lastFx.key) {
+    if (v.roll) {
+      if (v.roll.crit) audio.playSfx("crit");
+      else if (v.roll.fumble) audio.playSfx("fumble");
+      else if (v.roll.success) audio.playSfx("hit");
+    }
+    lastFx = { key: fxKey, step: v.step, scene: v.sceneIndex, rev: state.rev || 0 };
+  }
   rootEl.innerHTML = "";
   if (state.phase === "lobby") { rootEl.appendChild(renderTitle(state)); return; }
   if (state.phase === "victory" || state.phase === "defeated") { rootEl.appendChild(renderRecap(state)); return; }
-  rootEl.appendChild(renderPlay(state));
+  rootEl.appendChild(renderPlay(v, state));
 }
 
-function stepBar(s) {
-  const cur = currentStep(s);
+function stepBar(v) {
   const barEl = el("div", { class: "step-bar" });
+  const STEPS = ["listen", "choose", "sayit", "roll", "result"];
+  const LABEL = { listen: "LISTEN", choose: "CHOOSE", sayit: "SAY IT", roll: "ROLL", result: "RESULT" };
   for (const st of STEPS) {
-    barEl.appendChild(el("span", { class: "step" + (st === cur ? " current" : "") + (STEPS.indexOf(st) < STEPS.indexOf(cur) ? " done" : "") }, STEP_LABEL[st]));
+    barEl.appendChild(el("span", { class: "step" + (st === v.step ? " current" : "") + (STEPS.indexOf(st) < v.stepIndex ? " done" : "") }, LABEL[st]));
   }
   return barEl;
 }
@@ -113,29 +119,23 @@ function renderTitle(s) {
 }
 
 // ---------- Play ----------
-function renderPlay(s) {
-  const exp = s.expedition;
-  const room = exp.rooms[exp.current];
-  const isStory = exp.roomStatus === "story";
-  if (isStory) return renderStory(s, room);
-  return renderCombat(s, room);
+function renderPlay(v, s) {
+  if (v.roomStatus === "story") return renderStory(v, s);
+  return renderCombat(v, s);
 }
 
 // ---------- Story layout (episode story scenes) ----------
-function renderStory(s, room) {
-  const exp = s.expedition;
+function renderStory(v, s) {
   const wrap = el("div", { class: "story" });
-  wrap.appendChild(stepBar(s));
+  wrap.appendChild(stepBar(v));
 
-  // top bar: title + room path (no narration)
   const top = el("div", { class: "story-top" });
-  top.appendChild(el("span", { class: "story-title" }, exp.deckName));
-  top.appendChild(el("span", { class: "story-path" }, `Scene ${exp.current + 1}/${exp.rooms.length}`));
+  top.appendChild(el("span", { class: "story-title" }, v.title || v.goal || "Story"));
+  top.appendChild(el("span", { class: "story-path" }, `Scene ${v.sceneIndex + 1}/${v.sceneCount}`));
   wrap.appendChild(top);
 
-  // scene area: sprite + zone
   const scene = el("div", { class: "story-scene" });
-  const actor = s.players.find((p) => p.id === exp.storyActor);
+  const actor = s.players.find((p) => p.id === (v.actor ? v.actor.id : null));
   if (actor) {
     const slot = el("div", { class: "story-hero" });
     mountSprite(slot, actor.classId || "warrior", "idle-1", intSpriteScale(5));
@@ -143,11 +143,11 @@ function renderStory(s, room) {
     scene.appendChild(slot);
   }
   // approach cards (CHOOSE step: display-only)
-  if (exp.step === "choose" && exp.storyChoices) {
+  if (v.step === "choose" && v.cards.length) {
     const cards = el("div", { class: "approach-cards" });
-    exp.storyChoices.forEach((c, i) => {
+    v.cards.forEach((c) => {
       cards.appendChild(el("div", { class: "approach-card" },
-        el("div", { class: "approach-num" }, String(i + 1)),
+        el("div", { class: "approach-num" }, c.key),
         el("div", { class: "approach-label" }, c.label),
         el("div", { class: "approach-stat" }, classNameStat(c.stat)),
       ));
@@ -155,58 +155,52 @@ function renderStory(s, room) {
     scene.appendChild(cards);
   }
   // ROLL: big d20 + Spark count
-  if (exp.step === "roll" && exp.lastRoll) {
-    const r = exp.lastRoll;
+  if (v.step === "roll" && v.roll) {
     const roll = el("div", { class: "story-roll" });
-    const face = el("div", { class: "d20-face d20-big" + (r.crit ? " d20-crit" : ""), style: `font-size:${px(64)}` }, String(r.d20));
+    const face = el("div", { class: "d20-face d20-big" + (v.roll.crit ? " d20-crit" : ""), style: `font-size:${px(64)}` }, String(v.roll.d20));
     if (!REDUCED) { face.classList.add("d20-rolling"); setTimeout(() => face.classList.remove("d20-rolling"), 700); }
     roll.appendChild(face);
-    const spark = el("div", { class: "spark-count" }, `Spark ${s.party.score}`);
+    const spark = el("div", { class: "spark-count" }, `Spark ${v.spark}`);
     roll.appendChild(spark);
     scene.appendChild(roll);
   }
   wrap.appendChild(scene);
 
-  // dialogue box (typewriter, latest narration)
-  if (exp.log.length && exp.log[0] && exp.log[0].text) {
+  // dialogue box = the scene's read text (D3: never the log line)
+  if (v.read) {
     const dlg = el("div", { class: "story-dialogue" });
-    const tw = typewriterText(exp.log[0].text, { speed: 18 });
-    dlg.appendChild(tw);
-    dlg.setAttribute("data-narration", exp.log[0].text);
+    dlg.appendChild(typewriterText(v.read, { speed: 18 }));
+    dlg.setAttribute("data-narration", v.read);
     wrap.appendChild(dlg);
   }
   return wrap;
 }
 
-function classNameStat(stat) {
-  return { might: "Might", agility: "Agility", mind: "Mind", heart: "Heart" }[stat] || stat;
-}
-
 // ---------- Combat / challenge / trap / other ----------
-function renderCombat(s, room) {
+function renderCombat(v, s) {
   const exp = s.expedition;
   const battle = el("div", { class: "battle" });
-  battle.appendChild(stepBar(s));
+  battle.appendChild(stepBar(v));
 
   const field = el("div", { class: "battle-field" });
   const map = el("div", { class: "stage-map" });
-  map.appendChild(el("div", { class: "map-title" }, exp.deckName || exp.deckId));
+  map.appendChild(el("div", { class: "map-title" }, v.title || exp.deckName || exp.deckId));
   const nodes = el("div", { class: "map-nodes" });
   exp.rooms.forEach((r, i) => {
-    const cls = "map-node" + (i === exp.current ? " current" : "") + (r.kind === "combat" && r.boss ? " boss" : "");
+    const cls = "map-node" + (i === v.sceneIndex ? " current" : "") + (r.kind === "combat" && r.boss ? " boss" : "");
     nodes.appendChild(el("span", { class: cls, title: r.kind }, String(i + 1)));
   });
   map.appendChild(nodes);
   field.appendChild(map);
 
-  if (exp.monster) {
+  if (v.monster) {
     const en = el("div", { class: "battle-enemies" });
     const slot = el("div", { class: "enemy-slot" });
-    const key = exp.monster.id || "grumble-slime";
-    const frame = exp.monster.hp === 0 ? "down" : "idle-1";
-    mountSprite(slot, key, frame, exp.monster.boss ? intSpriteScale(2) : intSpriteScale(4));
-    slot.appendChild(el("div", { class: "pname-tag" }, exp.monster.name));
-    slot.appendChild(bar(exp.monster.hp, exp.monster.maxHp, "hp"));
+    const key = (exp.monster && exp.monster.id) || "grumble-slime";
+    const frame = v.monster.hp === 0 ? "down" : "idle-1";
+    mountSprite(slot, key, frame, exp.monster && exp.monster.boss ? intSpriteScale(2) : intSpriteScale(4));
+    slot.appendChild(el("div", { class: "pname-tag" }, v.monster.name));
+    slot.appendChild(bar(v.monster.hp, v.monster.maxHp, "hp"));
     en.appendChild(slot);
     field.appendChild(en);
   }
@@ -218,7 +212,7 @@ function renderCombat(s, room) {
     slot.appendChild(el("div", { class: "pname-tag" }, `${p.name}${p.npc ? " (NPC)" : ""}`));
     slot.appendChild(bar(p.hp, p.maxHp, "hp"));
     slot.appendChild(bar(p.focus, p.maxFocus, "focus"));
-    if (exp.activePlayerId === p.id) slot.classList.add("acting");
+    if (v.actor && p.id === v.actor.id) slot.classList.add("acting");
     party.appendChild(slot);
   }
   field.appendChild(party);
@@ -226,40 +220,33 @@ function renderCombat(s, room) {
 
   // bottom menu window
   const menu = el("div", { class: "battle-menu" });
-  const actor = s.players.find((p) => p.id === exp.activePlayerId);
-  const acting = !!actor && !actor.npc && (exp.roomStatus === "combat" || exp.roomStatus === "challenge" || exp.roomStatus === "trap") && exp.actionPhase === "choosing";
-
-  if (exp.langPrompt) {
+  if (v.step === "sayit" && v.ask) {
     menu.appendChild(el("span", { class: "cmd-label" }, "Say it:"));
-    menu.appendChild(el("span", { class: "prompt" }, exp.langPrompt.text));
-  } else if (acting && actor) {
-    menu.appendChild(el("span", { class: "cmd-label" }, `${actor.name} (${className(actor.classId)}) — your turn:`));
-    const cls = getContent().classes.find((c) => c.id === actor.classId);
-    const basic = el("button", { class: "cmd" }, `Basic attack (free)`);
-    basic.addEventListener("click", () => audio.playSfx("click"));
-    menu.appendChild(basic);
-    for (const sid of cls.skillIds) {
+    menu.appendChild(el("span", { class: "prompt" }, v.ask));
+  } else if (v.step === "choose" && v.actor && v.roomStatus !== "story") {
+    menu.appendChild(el("span", { class: "cmd-label" }, `${v.actor.name} (${className(v.actor.classId)}) — your turn:`));
+    // NOTE: D2 (skills as clickable buttons) is fixed in M4; here non-interactive labels only.
+    const cls = getContent().classes.find((c) => c.id === v.actor.classId);
+    const labels = el("div", { class: "cmd-labels" });
+    labels.appendChild(el("span", { class: "cmd" }, "Basic attack (free)"));
+    for (const sid of (cls ? cls.skillIds : [])) {
       const sk = getContent().skills.find((x) => x.id === sid);
-      const btn = el("button", { class: "cmd", disabled: actor.focus < sk.cost ? "" : null }, `${sk.name} (${sk.cost} F)`);
-      btn.addEventListener("click", () => audio.playSfx("click"));
-      menu.appendChild(btn);
+      labels.appendChild(el("span", { class: "cmd" }, `${sk ? sk.name : "skill"} (${sk ? sk.cost : 0} F)`));
     }
-  } else if (exp.roomStatus === "cleared") {
+    menu.appendChild(labels);
+  } else if (v.roomStatus === "cleared") {
     menu.appendChild(el("span", { class: "muted" }, "Room cleared — wait for the teacher."));
-  } else if (exp.roomStatus === "defeat") {
+  } else if (v.roomStatus === "defeat") {
     menu.appendChild(el("span", { class: "roll-fail" }, "The party is overwhelmed..."));
-  } else {
-    menu.appendChild(el("span", { class: "muted" }, room.flavour));
+  } else if (v.read) {
+    menu.appendChild(el("span", { class: "muted" }, v.read));
   }
 
-  if (exp.lastRoll) {
-    const r = exp.lastRoll;
+  if (v.roll) {
+    const r = v.roll;
     const rollWrap = el("div", { class: "d20-stage" });
     const face = el("div", { class: "d20-face" + (r.crit ? " d20-crit" : "") }, String(r.d20));
     if (!REDUCED) { face.classList.add("d20-rolling"); setTimeout(() => face.classList.remove("d20-rolling"), 700); }
-    if (r.crit) audio.playSfx("crit");
-    else if (r.fumble) audio.playSfx("fumble");
-    else if (r.success) audio.playSfx("hit");
     rollWrap.appendChild(face);
     const res = r.crit ? "CRIT!" : r.fumble ? "FUMBLE!" : r.success ? "success" : "fail";
     const line = el("div", { class: "roll-line" },
@@ -274,13 +261,6 @@ function renderCombat(s, room) {
     menu.appendChild(rollWrap);
   }
   battle.appendChild(menu);
-
-  if (exp.log.length && exp.log[0] && exp.log[0].text) {
-    const tw = el("div", { class: "typewriter-wrap" });
-    tw.appendChild(typewriterText(exp.log[0].text, { speed: 18 }));
-    tw.setAttribute("data-narration", exp.log[0].text);
-    battle.appendChild(tw);
-  }
   return battle;
 }
 

@@ -5,8 +5,8 @@
 import { getState, subscribe } from "../engine/state.js";
 import { getContent } from "../engine/content.js";
 import * as actions from "../engine/actions.js";
+import { getView, currentStep } from "../engine/view.js";
 import { el, bar } from "./util.js";
-import { currentStep } from "./stage.js";
 
 const STEPS = ["listen", "choose", "sayit", "roll", "result"];
 const STEP_LABEL = { listen: "LISTEN", choose: "CHOOSE", sayit: "SAY IT", roll: "ROLL", result: "RESULT" };
@@ -188,10 +188,29 @@ export function mountGm(container) {
 
   function render() {
     const s = getState();
+    // D8: preserve UI state across the DOM rebuild
+    const tools = root.querySelector(".tools");
+    const toolsOpen = tools ? tools.open : null;
+    const narr = root.querySelector("#gm-narrate");
+    const narrValue = narr ? narr.value : null;
+    const active = document.activeElement;
+    const activeId = active && active.id ? active.id : null;
     root.innerHTML = "";
     root.appendChild(renderTop(s));
     if (s.phase === "lobby") root.appendChild(renderLobby(s));
     else root.appendChild(renderPlay(s));
+    if (toolsOpen !== null) {
+      const t2 = root.querySelector(".tools");
+      if (t2) t2.open = toolsOpen;
+    }
+    if (narrValue !== null) {
+      const n2 = root.querySelector("#gm-narrate");
+      if (n2) n2.value = narrValue;
+    }
+    if (activeId) {
+      const a2 = root.querySelector("#" + activeId);
+      if (a2) a2.focus();
+    }
   }
 }
 
@@ -339,6 +358,7 @@ function renderLobby(s) {
 function renderPlay(s) {
   const body = el("div");
   const exp = s.expedition;
+  const view = getView(s);
 
   if (s.phase === "victory" || s.phase === "defeated") {
     const won = s.phase === "victory";
@@ -354,10 +374,11 @@ function renderPlay(s) {
 
   // current state panel
   const panel = el("div", { class: "window state-panel" });
-  panel.appendChild(el("div", {}, `Scene ${exp.current + 1}/${exp.rooms.length} — ${exp.deckName}: ${room.flavour}`));
-  if (exp.monster) {
-    panel.appendChild(el("div", {}, `Enemy: ${exp.monster.name}`));
-    panel.appendChild(bar(exp.monster.hp, exp.monster.maxHp, "hp"));
+  panel.appendChild(el("div", {}, `Scene ${exp.current + 1}/${exp.rooms.length} — ${view.title || exp.deckName}`));
+  if (view.read) panel.appendChild(el("p", { class: "read-aloud" }, view.read));
+  if (view.monster) {
+    panel.appendChild(el("div", {}, `Enemy: ${view.monster.name}`));
+    panel.appendChild(bar(view.monster.hp, view.monster.maxHp, "hp"));
   }
   body.appendChild(panel);
 
@@ -374,20 +395,20 @@ function renderPlay(s) {
     body.appendChild(p);
   }
 
-  // CHOOSE: approach cards (story) or skills (combat)
+  // CHOOSE: approach cards (story, from the view) or skills (combat)
   if (step === "choose") {
-    if (exp.storyChoices) {
+    if (exp.storyChoices && view.cards.length) {
       const choose = el("div", { class: "window" });
       choose.appendChild(el("h3", {}, "Choose an approach (keys 1-4)"));
       const actorC = s.players.find((p) => p.id === exp.storyActor);
       if (actorC) choose.appendChild(el("p", { class: "muted" }, `Approach as ${actorC.name} (${className(actorC.classId)}):`));
-      exp.storyChoices.forEach((c, i) => {
+      view.cards.forEach((c) => {
         choose.appendChild(el("button", {
           "data-action": "choose-approach",
           "data-value": c.id,
-          "data-approach-num": String(i + 1),
+          "data-approach-num": c.key,
           class: "approach-btn",
-        }, `${i + 1}. ${c.label} — ${classNameStat(c.stat)} (${c.difficulty})`));
+        }, `${c.key}. ${c.label} — ${classNameStat(c.stat)} (${c.stars})`));
       });
       body.appendChild(choose);
     } else if (exp.roomStatus === "combat") {
@@ -415,15 +436,14 @@ function renderPlay(s) {
   }
 
   // SAY IT: prompt + grade buttons (keys 1/2/3) — combat uses judge-lang, story uses grade-story
-  if (step === "sayit" && exp.langPrompt) {
-    const lp = exp.langPrompt;
+  if (step === "sayit" && view.ask) {
     const isCombat = exp.roomStatus === "combat";
     const act = isCombat ? "judge-lang" : "grade-story";
     const say = el("div", { class: "window" });
     say.appendChild(el("h3", {}, "Say it"));
-    say.appendChild(el("p", {}, `Say it: ${lp.text}`));
-    if (lp.target) say.appendChild(el("p", { class: "muted" }, `Teacher hint — target: ${lp.target}`));
-    if (lp.example) say.appendChild(el("p", { class: "muted" }, `Teacher hint — example: ${lp.example}`));
+    say.appendChild(el("p", {}, `Say it: ${view.ask}`));
+    if (view.hints.target) say.appendChild(el("p", { class: "muted" }, `Teacher hint — target: ${view.hints.target}`));
+    if (view.hints.example) say.appendChild(el("p", { class: "muted" }, `Teacher hint — example: ${view.hints.example}`));
     const row = el("div", { class: "row" });
     row.appendChild(el("button", { "data-action": act, "data-value": "0" }, "1 · Weak (+0)"));
     row.appendChild(el("button", { "data-action": act, "data-value": "2", class: "success" }, "2 · Good (+2)"));
