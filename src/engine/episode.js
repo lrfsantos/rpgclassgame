@@ -22,6 +22,7 @@ export function buildEpisodeExpedition(episode) {
           monsterName: m ? m.name : sc.monsterId,
           scenePrompt: sc.prompt,
           scene: { onGood: sc.onGood, onBad: sc.onBad },
+          talkDown: sc.talkDown || null,
         },
       };
     }

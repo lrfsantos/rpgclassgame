@@ -46,4 +46,8 @@
 - M1: state has a monotonic rev; broadcast+save exclude history (D14); Stage ingests via BroadcastChannel + storage event, popup reused by fixed name (D9).
 - M2: src/engine/view.js is the single view source (getView/getStageView); Stage never reads the log; audio/typewriter only on (step,scene,rev) change (D3/D8/D11).
 - M3a: narration depends on the roll - English (graded) only raises the odds; the ROLL step's d20 decides success/outcome; Spark at roll time (+4/+6/+1); items gained on success; assists (+1, max +2) also work in story sayit/roll steps.
+- M3b: episode combat scene onGood/onBad fire ONCE when the combat ends (D6), not per graded action; the scene prompt does not repeat every turn.
+- M3b: Talk it down - an episode combat scene can offer a "talk it down" card (harder roll via the story step machine); success clears the room with the scene outcome, failure resumes normal combat.
+- M3b: Reshuffle options - a reshuffleOptions action bumps the card seed; 4-choice scenes show 3, reshuffle changes the set.
+- M3b: Random Expedition challenge/trap rooms use the same story step machine (listen/choose/sayit/roll/result) with choices from content/approaches.json; challenge success heals, trap failure damages; advanceRoom now advances story rooms too.
 

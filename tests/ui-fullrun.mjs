@@ -142,6 +142,15 @@ async function driveRun(gm, stageClient = null) {
     const hasNext = await gm.eval(`!!document.querySelector('[data-action="advance-room"]:not([disabled])')`);
     if (hasNext) { await gm.eval(`document.querySelector('[data-action="advance-room"]').click()`); await wait(120); continue; }
 
+    // story step machine (episode story rooms + Random Expedition challenge/trap):
+    // CHOOSE -> approach card, SAY IT -> grade-story, LISTEN/ROLL/RESULT -> primary
+    const hasApproach = await gm.eval(`!!document.querySelector('[data-action="choose-approach"]')`);
+    if (hasApproach) { await gm.eval(`document.querySelector('[data-action="choose-approach"]').click()`); await wait(120); continue; }
+    const hasGradeStory = await gm.eval(`!!document.querySelector('[data-action="grade-story"]')`);
+    if (hasGradeStory) { await gm.eval(`document.querySelector('[data-action="grade-story"][data-value="2"]').click()`); await wait(120); continue; }
+    const hasStoryPrimary = await gm.eval(`!!document.querySelector('.primary-step[data-action="story-continue"]')`);
+    if (hasStoryPrimary) { await gm.eval(`document.querySelector('.primary-step[data-action="story-continue"]').click()`); await wait(120); continue; }
+
     const hasLang = await gm.eval(`!!document.querySelector('[data-action="judge-lang"]')`);
     if (hasLang) {
       if (!testedAssist) {

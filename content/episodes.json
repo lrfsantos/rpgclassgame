@@ -44,6 +44,17 @@
               "example": "Could you tell us how high the tower is?",
               "onGood": "The Elder answers with a story and a warning.",
               "onBad": "The Elder gives a short, worried answer."
+            },
+            {
+              "id": "offer-a-gift",
+              "label": "Offer a gift",
+              "stat": "heart",
+              "difficulty": 12,
+              "text": "Offer the Elder something from the party's pack, with one kind sentence.",
+              "target": "A 'please take this' sentence with an adjective.",
+              "example": "Please take this warm blanket for the cold nights.",
+              "onGood": "The Elder's eyes soften. 'Kind hearts travel far.'",
+              "onBad": "The Elder shakes their head. 'Keep it. You will need it more.'"
             }
           ]
         },
@@ -142,7 +153,17 @@
             "example": "The bell must ring because the village has been silent for a hundred years."
           },
           "onGood": "The golem rumbles, confused, and gives you an opening.",
-          "onBad": "The golem shows no mercy. It attacks!"
+          "onBad": "The golem shows no mercy. It attacks!",
+          "talkDown": {
+            "label": "Talk it down",
+            "stat": "heart",
+            "difficulty": 14,
+            "text": "Persuade the golem to step aside with one kind, clear sentence.",
+            "target": "A polite request with 'please' or 'could you'.",
+            "example": "Please let us pass, great golem — the bell must ring again.",
+            "onGood": "The golem blinks slowly, then bows and steps aside. No fight needed!",
+            "onBad": "The golem does not understand. It raises a stone fist and attacks!"
+          }
         },
         {
           "id": "the-clapper",

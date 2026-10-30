@@ -2,6 +2,7 @@
 import { loadContent, getContent } from "file:///C:/Users/luiza/Documents/protogame/src/engine/content.js";
 import * as stateMod from "file:///C:/Users/luiza/Documents/protogame/src/engine/state.js";
 import * as actions from "file:///C:/Users/luiza/Documents/protogame/src/engine/actions.js";
+import { getView } from "file:///C:/Users/luiza/Documents/protogame/src/engine/view.js";
 
 const store = {};
 globalThis.localStorage = { getItem: (k) => (k in store ? store[k] : null), setItem: (k, v) => { store[k] = String(v); }, removeItem: (k) => { delete store[k]; } };
@@ -51,6 +52,20 @@ for (let r = 0; r < RUNS; r++) {
       const exp = s.expedition;
       if (exp.roomType) throw new Error("dangling roomType");
       if (exp.roomStatus === "cleared" || exp.roomStatus === "defeat") { actions.advanceRoom(); continue; }
+
+      // story step machine: episode story rooms + Random Expedition challenge/trap
+      if (exp.roomStatus === "story") {
+        if (exp.step === "listen") { actions.storyContinue(); continue; }
+        if (exp.step === "choose") { const v = getView(s); if (v.cards.length) actions.chooseStoryApproach(randChoice(v.cards).id); continue; }
+        if (exp.step === "sayit") {
+          const others = s.players.filter((p) => !p.npc && p.hp > 0 && p.id !== exp.pending.playerId);
+          if (others.length && Math.random() < 0.5) actions.grantAssist(randChoice(others).id);
+          actions.gradeStory(randChoice([0, 2, 4]));
+          continue;
+        }
+        if (exp.step === "roll") { actions.rollStory(); continue; }
+        actions.storyContinue(); continue;
+      }
 
       if (exp.actionPhase === "acting" && exp.langPrompt) {
         const actor = s.players.find((p) => p.id === exp.pending.playerId);

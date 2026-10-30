@@ -173,6 +173,91 @@ actions.grantAssist(humans.length > 2 ? humans[2].id : humans[0].id);
 s = stateMod.getState();
 assert(s.expedition.assistBonus === 2, "assist cap is +2 (got " + s.expedition.assistBonus + ")");
 
+// ---- M3b-10 Talk it down: both branches ----
+function driveToCombatChoose() {
+  let n = 0;
+  while (n++ < 60) {
+    s = stateMod.getState();
+    const v = getView(s);
+    const exp = s.expedition;
+    if (exp.roomStatus === "combat" && exp.actionPhase === "choosing" && exp.monster) return v;
+    if (exp.roomStatus === "story") {
+      if (exp.step === "listen") actions.storyContinue();
+      else if (exp.step === "choose") actions.chooseStoryApproach(v.cards[0].id);
+      else if (exp.step === "sayit") actions.gradeStory(2);
+      else if (exp.step === "roll") actions.rollStory(10);
+      else if (exp.step === "result") actions.storyContinue();
+    } else {
+      const actor = s.players.find((p) => p.id === exp.activePlayerId);
+      if (exp.actionPhase === "choosing" && actor && !actor.npc) actions.chooseAction(actor.id, null);
+      else actions.storyContinue();
+    }
+  }
+  return null;
+}
+
+// success branch: rollStory(20) clears the room with the talk-down onGood
+freshEpisode();
+v = driveToCombatChoose();
+assert(v && v.roomStatus === "combat", "drive reached the combat CHOOSE for talk-down");
+assert(v.talkDown && v.talkDown.label, "combat scene exposes a talkDown card");
+const roomBefore = stateMod.getState().expedition.current;
+actions.chooseTalkDown();
+s = stateMod.getState();
+assert(s.expedition.roomStatus === "story" && s.expedition.step === "sayit" && s.expedition.talkDown === true, "chooseTalkDown enters the story sayit step");
+actions.gradeStory(2);
+actions.rollStory(20);
+s = stateMod.getState();
+v = getView(s);
+assert(v.outcome && v.outcome.success === true, "talk-down rollStory(20) success");
+assert(v.outcome && v.outcome.text.includes("golem"), "talk-down success outcome is the talk onGood");
+assert(s.expedition.roomStatus === "cleared", "talk-down success clears the room (no combat)");
+assert(s.expedition.current === roomBefore && s.phase === "expedition", "talk-down success advances to the next room on Continue");
+actions.storyContinue();
+assert(stateMod.getState().expedition.current === roomBefore + 1, "after talk-down success Continue advances to next scene");
+
+// failure branch: rollStory(1) resumes combat, not advance
+freshEpisode();
+v = driveToCombatChoose();
+const roomBefore2 = stateMod.getState().expedition.current;
+actions.chooseTalkDown();
+actions.gradeStory(2);
+actions.rollStory(1);
+s = stateMod.getState();
+v = getView(s);
+assert(v.outcome && v.outcome.success === false, "talk-down rollStory(1) fails");
+assert(v.outcome && v.outcome.text.includes("golem"), "talk-down failure outcome is the talk onBad");
+assert(s.expedition.talkDownFailed === true, "talk-down failure sets talkDownFailed");
+actions.storyContinue();
+s = stateMod.getState();
+assert(s.expedition.roomStatus === "combat" && s.expedition.monster, "talk-down failure resumes the combat (monster present)");
+assert(s.expedition.current === roomBefore2, "talk-down failure does NOT advance the room");
+
+// ---- M3b-11 Reshuffle: a 4-choice scene shows 3; reshuffle changes the set ----
+freshEpisode();
+let nR = 0;
+let firstSet = null, secondSet = null;
+while (nR++ < 20) {
+  s = stateMod.getState();
+  v = getView(s);
+  if (expIsStoryAt(s, "choose")) {
+    if (!firstSet) {
+      firstSet = v.cards.map((c) => c.id).join(",");
+      actions.reshuffleOptions();
+    } else {
+      secondSet = v.cards.map((c) => c.id).join(",");
+      break;
+    }
+  }
+  if (expIsStoryAt(s, "listen")) actions.storyContinue();
+  else if (expIsStoryAt(s, "sayit")) actions.gradeStory(2);
+  else if (expIsStoryAt(s, "roll")) actions.rollStory(10);
+  else if (expIsStoryAt(s, "result")) actions.storyContinue();
+  else actions.storyContinue();
+}
+assert(firstSet && firstSet.split(",").length === 3, "a 4-choice scene shows exactly 3 cards at CHOOSE (got " + firstSet + ")");
+assert(secondSet && secondSet !== firstSet, "reshuffle changes the set of shown cards (" + firstSet + " -> " + secondSet + ")");
+
 // drive to the end so the currentStep assertion still holds
 let n2 = 0;
 while (n2++ < 40) {

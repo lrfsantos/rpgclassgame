@@ -1,0 +1,113 @@
+{
+  "version": 2,
+  "pools": {
+    "challenge": [
+      {
+        "id": "challenge-riddle",
+        "kind": "challenge",
+        "label": "Answer the riddle",
+        "stat": "mind",
+        "difficulty": 12,
+        "text": "Answer the keeper's riddle out loud.",
+        "starter": "I think the answer is...",
+        "target": "A full sentence answer.",
+        "example": "I think the answer is a shadow, because it never moves.",
+        "onGood": "The keeper nods. A door opens with a creak.",
+        "onBad": "The keeper shakes their head. The riddle remains."
+      },
+      {
+        "id": "challenge-encourage",
+        "kind": "challenge",
+        "label": "Encourage the party",
+        "stat": "heart",
+        "difficulty": 11,
+        "text": "Give the party one strong sentence of encouragement.",
+        "starter": "Come on, everyone, we can...",
+        "target": "An encouraging sentence with 'we can'.",
+        "example": "We can do this, we are strong together!",
+        "onGood": "The party feels braver and stands tall.",
+        "onBad": "The party waits, a little unsure."
+      },
+      {
+        "id": "challenge-spot",
+        "kind": "challenge",
+        "label": "Spot the clue",
+        "stat": "agility",
+        "difficulty": 11,
+        "text": "Describe a hiding place where a clue might be.",
+        "starter": "Look carefully under the...",
+        "target": "A sentence with a place word.",
+        "example": "Look carefully under the loose stone beside the door.",
+        "onGood": "You find the clue hidden away.",
+        "onBad": "The clue stays hidden, for now."
+      },
+      {
+        "id": "challenge-plan",
+        "kind": "challenge",
+        "label": "Make a plan",
+        "stat": "mind",
+        "difficulty": 12,
+        "text": "Explain the next step in one clear sentence.",
+        "starter": "First, we should...",
+        "target": "A sentence with 'first' or 'then'.",
+        "example": "First, we should check the path, then follow the lights.",
+        "onGood": "The plan is clear. The path opens.",
+        "onBad": "The plan is muddled, but the path still waits."
+      }
+    ],
+    "trap": [
+      {
+        "id": "trap-check-floor",
+        "kind": "trap",
+        "label": "Check the floor",
+        "stat": "agility",
+        "difficulty": 12,
+        "text": "Warn everyone about the loose floor with one sentence.",
+        "starter": "Watch out, the floor...",
+        "target": "A warning sentence with 'don't'.",
+        "example": "Don't step there, the floor is weak!",
+        "onGood": "Everyone jumps clear. The trap stays quiet.",
+        "onBad": "A tile gives way and someone stumbles."
+      },
+      {
+        "id": "trap-spring",
+        "kind": "trap",
+        "label": "Spot the spring",
+        "stat": "mind",
+        "difficulty": 12,
+        "text": "Describe where the spring-loaded trap is hidden.",
+        "starter": "The trap is hidden near the...",
+        "target": "A sentence with 'near' or 'behind'.",
+        "example": "The trap is hidden behind the loose wall panel.",
+        "onGood": "You disarm the spring before it snaps.",
+        "onBad": "The spring snaps and a dart flies!"
+      },
+      {
+        "id": "trap-keep-still",
+        "kind": "trap",
+        "label": "Keep everyone still",
+        "stat": "heart",
+        "difficulty": 11,
+        "text": "Calm the party with one quiet, steady sentence.",
+        "starter": "Everyone, stay very...",
+        "target": "A calm command with an adverb.",
+        "example": "Everyone, stay very still and silent.",
+        "onGood": "The party freezes. The trap never triggers.",
+        "onBad": "Someone shifts and the trap clicks."
+      },
+      {
+        "id": "trap-smell",
+        "kind": "trap",
+        "label": "Smell the danger",
+        "stat": "mind",
+        "difficulty": 11,
+        "text": "Say what smells wrong in the room.",
+        "starter": "Something smells like...",
+        "target": "A sentence with 'like'.",
+        "example": "Something smells like smoke, we should move back.",
+        "onGood": "The smell warns you. You step around the trap.",
+        "onBad": "The smell is not enough. A net drops!"
+      }
+    ]
+  }
+}

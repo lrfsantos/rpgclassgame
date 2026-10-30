@@ -16,6 +16,7 @@ const FILES = [
   "vocabulary.json",
   "prompts.json",
   "episodes.json",
+  "approaches.json",
 ];
 
 const STATS = ["might", "agility", "mind", "heart"];
@@ -32,6 +33,7 @@ const VALIDATORS = {
   "vocabulary.json": validateVocabulary,
   "prompts.json": validatePrompts,
   "episodes.json": validateEpisodes,
+  "approaches.json": validateApproaches,
 };
 
 let cache = null;
@@ -79,6 +81,7 @@ function buildIndex(loaded) {
   const monsters = loaded["monsters.json"].monsters;
   const decks = loaded["rooms.json"].decks;
   const episodes = loaded["episodes.json"] ? loaded["episodes.json"].episodes : [];
+  const approaches = loaded["approaches.json"] ? loaded["approaches.json"].pools : {};
   const skillById = new Map(skills.map((s) => [s.id, s]));
   const classById = new Map(classes.map((c) => [c.id, c]));
   const deckById = new Map(decks.map((d) => [d.id, d]));
@@ -129,10 +132,35 @@ function buildIndex(loaded) {
     playerNames: loaded["prompts.json"].playerNames,
     narrations: loaded["prompts.json"].narrations,
     episodes,
+    approaches,
   };
 }
 
 const SCENE_KINDS = ["story", "combat"];
+const POOL_KINDS = ["challenge", "trap"];
+const APPROACH_KEYS = ["id", "kind", "label", "stat", "difficulty", "text", "starter", "target", "example", "onGood", "onBad"];
+function validateApproaches(data) {
+  if (!data.pools || typeof data.pools !== "object") return ["missing object 'pools'"];
+  const errs = [];
+  for (const kind of POOL_KINDS) {
+    const pool = data.pools[kind];
+    errs.push(...fail(Array.isArray(pool) && pool.length >= 4, `approaches.json: pool "${kind}" needs at least 4 choices`));
+    if (!Array.isArray(pool)) continue;
+    const seen = new Set();
+    pool.forEach((c, i) => {
+      errs.push(...fail(!seen.has(c.id), `approaches.json: ${kind} duplicate choice id "${c.id}"`));
+      seen.add(c.id);
+      errs.push(
+        ...fail(APPROACH_KEYS.filter((k) => k !== "difficulty").every((key) => typeof c[key] === "string"), `approaches.json: ${kind}[${i}] needs ${APPROACH_KEYS.filter((x) => x !== "difficulty").join("/")} as strings`),
+        ...fail(c.kind === kind, `approaches.json: ${kind}[${i}] choice kind must be "${kind}"`),
+        ...fail(STATS.includes(c.stat), `approaches.json: ${kind} choice ${c.id} bad stat "${c.stat}"`),
+        ...fail(Number.isFinite(c.difficulty), `approaches.json: ${kind} choice ${c.id} needs numeric difficulty`)
+      );
+    });
+  }
+  return errs;
+}
+
 const CHOICE_KEYS = ["id", "label", "stat", "difficulty", "text", "target", "example", "onGood", "onBad"];
 function validateEpisodes(data) {
   if (!Array.isArray(data.episodes)) return ["missing array 'episodes'"];

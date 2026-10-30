@@ -119,6 +119,12 @@ export function mountGm(container) {
       case "grade-story":
         actions.gradeStory(parseInt(value, 10));
         break;
+      case "talk-down":
+        actions.chooseTalkDown();
+        break;
+      case "reshuffle-options":
+        actions.reshuffleOptions();
+        break;
       case "use-skill": {
         const spec = JSON.parse(value);
         actions.chooseAction(spec.playerId, spec.skillId);
@@ -434,6 +440,12 @@ function renderPlay(s) {
             title: afford ? null : "Not enough Focus",
           }, `${i + 1}. ${sk ? sk.name : "Basic attack"} ${sk ? `(${sk.cost} F) — ${sk.flavour}` : "(free)"}`));
         });
+        if (view.talkDown) {
+          choose.appendChild(el("button", {
+            "data-action": "talk-down",
+            class: "approach-btn talk-btn",
+          }, `${view.talkDown.label} (${classNameStat(view.talkDown.stat)} ${view.talkDown.difficulty}) — try words before swords`));
+        }
         body.appendChild(choose);
       }
     }
@@ -492,6 +504,7 @@ function renderPlay(s) {
   const trow = el("div", { class: "row" });
   trow.appendChild(el("button", { "data-action": "reroll", disabled: exp.lastAction ? null : "", title: exp.lastAction ? null : "No action to reroll yet" }, "Reroll last"));
   trow.appendChild(el("button", { "data-action": "undo" }, "Undo"));
+  trow.appendChild(el("button", { "data-action": "reshuffle-options", class: "primary", disabled: view.cards.length ? null : "", title: view.cards.length ? null : "Only when choices are shown" }, "Reshuffle options"));
   trow.appendChild(el("button", { "data-action": "skip-room" }, "Skip room"));
   const advDisabled = !["cleared", "defeat"].includes(exp.roomStatus);
   trow.appendChild(el("button", { "data-action": "advance-room", class: "primary", disabled: advDisabled ? "" : null, title: advDisabled ? "Finish the current step first" : null }, "Next room"));

@@ -238,6 +238,9 @@ export function startEpisode(episodeId) {
     s.expedition.storyChoiceId = null;
     s.expedition.storyActor = null;
     s.expedition.storyDiffBonus = 0;
+    s.expedition.talkDown = false;
+    s.expedition.talkDownFailed = false;
+    s.expedition.reshuffle = 0;
 
     log(s, `${ep.name}: ${ep.flavour}`, "system");
     maybeAddNpc(s);
@@ -248,11 +251,13 @@ export function startEpisode(episodeId) {
 
 // ---------- episode story steps (LISTEN -> CHOOSE -> SAY IT -> ROLL -> RESULT) ----------
 
-// GM primary button. Behavior depends on the current step.
+// GM primary button. Behavior depends on the current step. Works for episode
+// story rooms AND Random Expedition challenge/trap rooms converted to the story
+// machine (step machine keyed on roomStatus==="story" + exp.step).
 export function storyContinue() {
   return mutate((s) => {
     const exp = s.expedition;
-    if (!exp || exp.mode !== "episode") return s;
+    if (!exp) return s;
     if (exp.step === "listen" && exp.roomStatus === "story") {
       // choose a rotating actor for this scene
       const alive = aliveHumans(s);
@@ -262,6 +267,18 @@ export function storyContinue() {
       log(s, `${playerById(s, exp.storyActor).name} picks the approach.`, "system");
     } else if (exp.step === "roll" && exp.roomStatus === "story") {
       doStoryRoll(s);
+    } else if (exp.talkDownFailed) {
+      // talk-down failed: resume the normal combat (the monster attacks)
+      exp.talkDownFailed = false;
+      exp.roomStatus = "combat";
+      exp.actionPhase = "choosing";
+      if (!exp.monster) spawnMonster(s);
+      else if (!exp.spotlight || exp.spotlight.length === 0) {
+        buildSpotlight(s);
+        exp.spotlightIndex = 0;
+        startActor(s);
+      }
+      log(s, "The talk fails — the monster attacks!", "combat");
     } else if (exp.step === "result" || ["cleared", "defeat"].includes(exp.roomStatus)) {
       advanceAfterRoom(s, "cleared");
     }
@@ -274,7 +291,7 @@ export function storyContinue() {
 export function rollStory(forceD20) {
   return mutate((s) => {
     const exp = s.expedition;
-    if (!exp || exp.mode !== "episode" || exp.roomStatus !== "story" || exp.step !== "roll") return s;
+    if (!exp || exp.roomStatus !== "story" || exp.step !== "roll") return s;
     doStoryRoll(s, forceD20);
     exp.step = "result";
     return s;
@@ -290,7 +307,8 @@ function doStoryRoll(s, forceD20) {
   const r = exp.lastRoll;
   if (!r) return;
   const room = currentRoom(s);
-  const choice = (room.event.choices || []).find((c) => c.id === exp.storyChoiceId) || {};
+  const td = exp.talkDown ? (room.event.talkDown || null) : null;
+  const choice = td || ((room.event.choices || []).find((c) => c.id === exp.storyChoiceId) || {});
   let text = r.success ? choice.onGood : choice.onBad;
   if (r.crit) text = (text || "") + " " + pickNarration(s, "crit", {});
   else if (r.fumble) text = (text || "") + " " + pickNarration(s, "fumble", {});
@@ -312,18 +330,99 @@ function doStoryRoll(s, forceD20) {
     s.party.score += 1;
     log(s, `Spark +1 — a stumble, but the story continues.`, "challenge");
   }
-  exp.roomStatus = "cleared";
-  exp.activePlayerId = null;
-  exp.actionPhase = "idle";
-  exp.challengeIndex += 1;
+  if (td) {
+    // Talk it down: success clears the room (scene won); failure resumes combat.
+    if (r.success) {
+      exp.roomStatus = "cleared";
+      exp.activePlayerId = null;
+      exp.actionPhase = "idle";
+      exp.challengeIndex += 1;
+      exp.talkDown = false;
+      fireCombatSceneOutcome(s, true);
+    } else {
+      exp.talkDownFailed = true;
+      exp.roomStatus = "story";
+      exp.step = "result";
+      return;
+    }
+  } else {
+    // Random Expedition challenge/trap rooms: apply the room reward on top of Spark
+    const ak = room.event.approachKind;
+    if (ak === "challenge") {
+      if (r.success) {
+        for (const a of allAlive(s)) a.hp = Math.min(a.maxHp, a.hp + 2);
+        log(s, `${playerById(s, r.playerId).name} masters the challenge! Party heals 2.`, "challenge");
+      } else {
+        log(s, "The challenge proves too tricky this time.", "challenge");
+      }
+    } else if (ak === "trap") {
+      if (r.success) {
+        log(s, `${playerById(s, r.playerId).name} dodges the trap!`, "trap");
+      } else {
+        const dmg = new Dice(newSeed()).roll(6);
+        const actor = playerById(s, r.playerId);
+        actor.hp = Math.max(0, actor.hp - dmg);
+        log(s, pickNarration(s, "trapFail", { player: actor.name }), "trap");
+        log(s, `${actor.name} takes ${dmg} damage from the trap.`, "trap");
+      }
+    }
+    exp.roomStatus = "cleared";
+    exp.activePlayerId = null;
+    exp.actionPhase = "idle";
+    exp.challengeIndex += 1;
+  }
 }
 
-// CHOOSE: pick one approach card (keys 1-4). Sets the pending roll.
+// TALK IT DOWN (M3b): from an episode combat CHOOSE, the class may try to talk
+// the monster down instead of fighting. Runs through the story step machine
+// (sayit -> roll -> result). Success clears the room with the scene outcome;
+// failure resumes normal combat.
+export function chooseTalkDown() {
+  return mutate((s) => {
+    const exp = s.expedition;
+    const room = currentRoom(s);
+    if (!exp || exp.mode !== "episode" || exp.roomStatus !== "combat" || exp.actionPhase !== "choosing") return s;
+    const td = room.event.talkDown;
+    if (!td) return s;
+    exp.talkDown = true;
+    exp.storyActor = exp.activePlayerId;
+    exp.pending = {
+      playerId: exp.activePlayerId,
+      choiceId: "talk-down",
+      stat: td.stat,
+      difficulty: td.difficulty,
+      kind: "talk",
+      effect: "room",
+    };
+    exp.langPrompt = { text: td.text, target: td.target, example: td.example };
+    exp.langBonus = 0;
+    exp.assistBonus = 0;
+    exp.roomStatus = "story";
+    exp.step = "sayit";
+    log(s, `Say it! ${td.text}`, "language");
+    return s;
+  });
+}
+
+// RESHUFFLE (M3b): bump the options seed so a new set of approach cards shows.
+// Used in story and challenge/trap rooms when the class wants fresh options.
+export function reshuffleOptions() {
+  return mutate((s) => {
+    const exp = s.expedition;
+    if (!exp) return s;
+    exp.reshuffle = (exp.reshuffle || 0) + 1;
+    log(s, "The options are shuffled.", "system");
+    return s;
+  });
+}
+
+// CHOOSE: pick one approach card (keys 1-4). Sets the pending roll. Works for
+// episode story rooms and Random Expedition challenge/trap story rooms.
 export function chooseStoryApproach(choiceId) {
   return mutate((s) => {
     const exp = s.expedition;
     const room = currentRoom(s);
-    if (!exp || exp.mode !== "episode" || exp.roomStatus !== "story" || exp.step !== "choose") return s;
+    if (!exp || exp.roomStatus !== "story" || exp.step !== "choose") return s;
     const choice = (room.event.choices || []).find((c) => c.id === choiceId);
     if (!choice) return s;
     exp.storyChoiceId = choiceId;
@@ -349,7 +448,7 @@ export function chooseStoryApproach(choiceId) {
 export function gradeStory(bonus) {
   return mutate((s) => {
     const exp = s.expedition;
-    if (!exp || exp.mode !== "episode" || exp.roomStatus !== "story" || exp.step !== "sayit") return s;
+    if (!exp || exp.roomStatus !== "story" || exp.step !== "sayit") return s;
     exp.langBonus = bonus;
     exp.langPrompt = null;
     exp.lastRoll = null;
@@ -415,6 +514,9 @@ function enterCurrentRoom(s) {
   s.expedition.storyActor = null;
   s.expedition.storyDiffBonus = 0;
   s.expedition.scenePromptDone = false;
+  s.expedition.sceneOutcomeFired = false;
+  s.expedition.talkDown = false;
+  s.expedition.talkDownFailed = false;
 
   // episode conditional scenes: resolve difficulty/flavour from flags at entry
   if (ev.conditional) {
@@ -454,16 +556,27 @@ function enterCurrentRoom(s) {
     s.expedition.spotlightIndex = 0;
     startActor(s);
   } else if (ev.type === "challenge" || ev.type === "trap") {
-    s.expedition.roomStatus = ev.type;
     const alive = aliveHumans(s);
-    if (alive.length > 0) {
-      s.expedition.activePlayerId = alive[s.expedition.challengeIndex % alive.length].id;
-      s.expedition.actionPhase = "choosing";
-      const actor = playerById(s, s.expedition.activePlayerId);
-      log(s, `${actor.name} faces the ${ev.type}!`, ev.type);
-    } else {
+    if (alive.length === 0) {
       s.expedition.roomStatus = "cleared";
+      log(s, "Everyone is dazed — the party slips through.", "system");
+      return;
     }
+    // Convert to the story step machine (D12): the class picks an approach from
+    // the themed pool, speaks, then the d20 decides; room rewards apply in
+    // doStoryRoll (challenge heals, trap damages).
+    const pool = ((getContent().approaches || {})[ev.type] || []).slice();
+    ev.choices = pool;
+    ev.approachKind = ev.type;
+    s.expedition.roomStatus = "story";
+    s.expedition.step = "listen";
+    s.expedition.storyChoices = ev.choices;
+    s.expedition.storyChoiceId = null;
+    s.expedition.storyActor = null;
+    s.expedition.lastRoll = null;
+    s.expedition.activePlayerId = null;
+    s.expedition.actionPhase = "idle";
+    log(s, room.flavour, ev.type);
   } else if (ev.type === "rest") {
     for (const p of s.players) { p.hp = p.maxHp; p.focus = p.maxFocus; }
     s.party.score += 2;
@@ -626,18 +739,6 @@ export function judgeLanguage(bonus) {
     const actor = playerById(s, exp.pending.playerId);
     const key = bonus >= 4 ? "languageGood" : bonus >= 2 ? "languageMid" : "languageWeak";
     log(s, pickNarration(s, key, { player: actor.name }), "language");
-    // episode combat scene onGood/onBad + flags fire ONCE, on the action that
-    // carried the scene prompt (D6). Later actions in the same room use random prompts.
-    if (exp.lastAction && exp.lastAction.wasScenePrompt) {
-      const room = currentRoom(s);
-      const scene = room.event.scene;
-      const good = bonus >= 2;
-      if (scene) {
-        if (scene.onGood && good) log(s, scene.onGood, "challenge");
-        else if (scene.onBad && !good) log(s, scene.onBad, "challenge");
-        if (good && scene.flags) Object.assign(exp.flags || (exp.flags = {}), scene.flags);
-      }
-    }
     resolveRoll(s, bonus, exp.assistBonus, null);
     return s;
   });
@@ -837,6 +938,7 @@ function proceedToNextRound(s) {
     exp.roomStatus = "cleared";
     exp.activePlayerId = null;
     exp.actionPhase = "idle";
+    fireCombatSceneOutcome(s, true);
     return;
   }
   exp.round += 1;
@@ -857,6 +959,7 @@ function onMonsterDown(s) {
   s.expedition.roomStatus = "cleared";
   s.expedition.activePlayerId = null;
   s.expedition.actionPhase = "idle";
+  fireCombatSceneOutcome(s, true);
 }
 
 function onDefeat(s) {
@@ -864,6 +967,25 @@ function onDefeat(s) {
   s.expedition.roomStatus = "defeat";
   s.expedition.activePlayerId = null;
   s.expedition.actionPhase = "idle";
+  fireCombatSceneOutcome(s, false);
+}
+
+// D6: an episode combat scene's onGood/onBad fire ONCE, when the combat ends
+// (not on every graded action). onGood also sets any scene flags.
+function fireCombatSceneOutcome(s, won) {
+  const exp = s.expedition;
+  if (!exp || exp.mode !== "episode") return;
+  const room = currentRoom(s);
+  const scene = room && room.event && room.event.scene;
+  if (!scene) return;
+  if (exp.sceneOutcomeFired) return;
+  exp.sceneOutcomeFired = true;
+  if (won && scene.onGood) {
+    log(s, scene.onGood, "challenge");
+    if (scene.flags) Object.assign(exp.flags || (exp.flags = {}), scene.flags);
+  } else if (!won && scene.onBad) {
+    log(s, scene.onBad, "challenge");
+  }
 }
 
 // Teacher tool: undo the last action and re-resolve it with a fresh die,
@@ -898,9 +1020,7 @@ export function rerollLast() {
 export function advanceRoom() {
   return mutate((s) => {
     if (s.phase !== "expedition") return s;
-    const st = s.expedition.roomStatus;
-    if (!["cleared", "defeat"].includes(st)) return s;
-    advanceAfterRoom(s, st);
+    advanceAfterRoom(s, "cleared");
     return s;
   });
 }

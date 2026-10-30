@@ -9,11 +9,8 @@ export const STEP_LABEL = { listen: "LISTEN", choose: "CHOOSE", sayit: "SAY IT",
 export function currentStep(state) {
   const exp = state.expedition;
   if (!exp) return null;
-  if (exp.mode === "episode") {
-    if (exp.roomStatus === "story") return exp.step || "listen";
-    if (exp.roomStatus === "cleared" || exp.roomStatus === "defeat") return "result";
-    return currentCombatStep(state);
-  }
+  if (exp.roomStatus === "story") return exp.step || "listen";
+  if (exp.roomStatus === "cleared" || exp.roomStatus === "defeat") return "result";
   return currentCombatStep(state);
 }
 
@@ -117,7 +114,7 @@ export function getView(state) {
   const phase = state.phase;
   const room = currentRoom(state);
   const ev = room && room.event ? room.event : {};
-  const isStory = exp && exp.mode === "episode" && ev && ev.type === "story";
+  const isStory = exp && (exp.roomStatus === "story" || (exp.mode === "episode" && ev.type === "story"));
   const step = currentStep(state) || "listen";
   const sceneIndex = exp ? exp.current : 0;
   const sceneCount = exp && exp.rooms ? exp.rooms.length : 0;
@@ -200,6 +197,7 @@ export function getView(state) {
     sceneIndex,
     sceneCount,
     monster: exp && exp.monster ? { name: exp.monster.name, hp: exp.monster.hp, maxHp: exp.monster.maxHp } : null,
+    talkDown: exp && exp.mode === "episode" && ev.talkDown ? { label: ev.talkDown.label, stat: ev.talkDown.stat, difficulty: ev.talkDown.difficulty } : null,
     pending: exp && exp.pending ? { playerId: exp.pending.playerId, stat: exp.pending.stat, difficulty: exp.pending.difficulty, kind: exp.pending.kind } : null,
   };
 }

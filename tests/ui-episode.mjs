@@ -95,6 +95,9 @@ async function playOnce(c, grade) {
 
   let lastRev = -1;
   let stall = 0;
+  let didTypeCheck = false;
+  let typeCheckedOn = "";
+  let skipOK = 0, skipFail = 0, autoCompleteOK = 0, autoCompleteFail = 0;
 
   while (steps++ < safety) {
     if (await evalJs(c.send, `/STORY COMPLETE!|STORY OVER/.test(document.body.textContent)`)) { recapReached = true; break; }
@@ -114,6 +117,23 @@ async function playOnce(c, grade) {
     const stageText = await evalJs(c.send, `document.querySelector('#stage') ? document.querySelector('#stage').textContent : ''`);
     for (const h of hints) if (h && stageText.includes(h)) stageHints.push(h);
     const stageDlg = await evalJs(c.send, `(()=>{const e=document.querySelector('#stage .story-dialogue[data-narration]'); return e?e.getAttribute('data-narration'):'';})()`);
+    // typewriter: a fresh dialogue must complete to full data-narration within 5s,
+    // and Enter (or click) must skip a partial dialogue to the full text (once)
+    if (!didTypeCheck && stageDlg && !typeCheckedOn) {
+      typeCheckedOn = stageDlg.slice(0, 40);
+      const partial = await evalJs(c.send, `(()=>{const e=document.querySelector('#stage .story-dialogue .typewriter'); const a=document.querySelector('#stage .story-dialogue[data-narration]'); if(!e||!a)return null; return {has:e.textContent!==a.getAttribute('data-narration'), cur:e.textContent.length, full:a.getAttribute('data-narration').length};})()`);
+      if (partial) {
+        // 1) skip via Enter (or click) makes visible text equal the full text
+        if (partial.has) {
+          const afterKey = await evalJs(c.send, `(()=>{const e=document.querySelector('#stage .story-dialogue .typewriter'); const a=document.querySelector('#stage .story-dialogue[data-narration]'); if(!e||!a)return null; e.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:false})); return e.textContent===a.getAttribute('data-narration');})()`);
+          if (afterKey === true) { skipOK++; } else { skipFail++; console.error("  TYPEWRITER: Enter did not skip to full text", JSON.stringify(partial)); }
+        } else { skipOK++; } // already complete: nothing to skip
+        // 2) a fresh dialogue completes to full text within 5s on its own
+        const autoOK = await evalJs(c.send, `(async()=>{const a=document.querySelector('#stage .story-dialogue[data-narration]'); if(!a)return null; const full=a.getAttribute('data-narration'); const t0=Date.now(); while(Date.now()-t0<5000){ const e=document.querySelector('#stage .story-dialogue .typewriter'); if(e&&e.textContent===full)return true; await new Promise(r=>setTimeout(r,100)); } return false;})()`);
+        if (autoOK === true) { autoCompleteOK++; } else { autoCompleteFail++; console.error("  TYPEWRITER: dialogue did not self-complete within 5s", JSON.stringify(partial)); }
+        didTypeCheck = true;
+      }
+    }
 
     // independent outcome oracle (M3a): read lastRoll.success from the SAVED
     // state (not from the same view both UIs render). At LISTEN the Stage
@@ -187,7 +207,7 @@ async function playOnce(c, grade) {
     await wait(200);
   }
 
-  return { stageHints, recapReached, noPrimary, badDisabled, spriteFails, outcomeMismatch, listenOracles, resultOracles, minFont, minContrast, steps, stuck };
+  return { stageHints, recapReached, noPrimary, badDisabled, spriteFails, outcomeMismatch, listenOracles, resultOracles, minFont, minContrast, steps, stuck, didTypeCheck, skipOK, skipFail, autoCompleteOK, autoCompleteFail };
 }
 
 try {
@@ -211,6 +231,9 @@ try {
   assert(great.minFont < 900 || great.minFont >= 24, great.minFont >= 900 ? "element not found: .stage .story-dialogue or .approach-card (font sentinel)" : `stage min font-size (virtual) >= 24px (measured ${great.minFont.toFixed(1)}px)`);
   assert(great.minContrast < 90 || great.minContrast >= 7, great.minContrast >= 90 ? "element not found: .stage .story-dialogue or .approach-card (contrast sentinel)" : `dialogue/card contrast >= 7:1 (measured ${great.minContrast.toFixed(2)})`);
   assert(great.stuck === null, `great run: did not stall (${JSON.stringify(great.stuck)})`);
+  assert(great.didTypeCheck, "great run: typewriter check ran on a story dialogue");
+  assert(great.skipFail === 0, `great run: Enter/click skips the typewriter to the full text (${great.skipOK} skipped, ${great.skipFail} failed)`);
+  assert(great.autoCompleteFail === 0, `great run: dialogue textContent equals full data-narration within 5s on its own (${great.autoCompleteOK} completed, ${great.autoCompleteFail} timed out)`);
   const saveG = await evalJs(c.send, `localStorage.getItem('classroom-rpg-save-v1')`);
   const parsedG = saveG ? JSON.parse(saveG) : null;
   assert(!!parsedG && parsedG.expedition && parsedG.expedition.outcome && parsedG.expedition.outcome.text && parsedG.expedition.outcome.text.length > 0, "great run: expedition.outcome.text set at recap");
