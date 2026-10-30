@@ -359,6 +359,7 @@ body, button, input, select, textarea, .window, .muted, .log-entry { font-family
 .approach-num { font-family: var(--font-body); font-weight: 700; color: var(--gold); font-size: calc(36px * var(--ss)); }
 .approach-label { font-family: var(--font-body, var(--font-body)); font-weight: 700; color: var(--bone); font-size: calc(36px * var(--ss)); text-align: center; }
 .approach-stat { font-family: var(--font-body); color: var(--bone-dim); font-size: calc(28px * var(--ss)); }
+.approach-starter { font-family: var(--font-body); color: var(--moss); font-size: calc(30px * var(--ss)); text-align: center; margin-top: calc(6px * var(--ss)); }
 .story-roll { display: flex; flex-direction: column; align-items: center; gap: calc(12px * var(--ss)); }
 .d20-face.d20-big { width: calc(160px * var(--ss)); height: calc(160px * var(--ss)); font-size: calc(72px * var(--ss)); }
 .spark-count { font-family: var(--font-body); font-weight: 700; color: var(--gold); font-size: calc(44px * var(--ss)); }

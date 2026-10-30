@@ -351,6 +351,12 @@ function renderLobby(s) {
   npc.checked = !!s.settings.npcCompanion;
   row1.appendChild(npc);
   settings.appendChild(row1);
+  const row2 = el("div", { class: "row" });
+  row2.appendChild(el("span", { class: "label" }, "Sentence starters on Stage"));
+  const st = el("input", { type: "checkbox", "data-setting": "startersOnStage" });
+  st.checked = s.settings.startersOnStage !== false;
+  row2.appendChild(st);
+  settings.appendChild(row2);
   body.appendChild(settings);
 
   // text size

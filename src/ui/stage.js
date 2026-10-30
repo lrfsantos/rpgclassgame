@@ -146,11 +146,13 @@ function renderStory(v, s) {
   if (v.step === "choose" && v.cards.length) {
     const cards = el("div", { class: "approach-cards" });
     v.cards.forEach((c) => {
-      cards.appendChild(el("div", { class: "approach-card" },
+      const card = el("div", { class: "approach-card" },
         el("div", { class: "approach-num" }, c.key),
         el("div", { class: "approach-label" }, c.label),
         el("div", { class: "approach-stat" }, classNameStat(c.stat)),
-      ));
+      );
+      if (c.starter) card.appendChild(el("div", { class: "approach-starter" }, c.starter));
+      cards.appendChild(card);
     });
     scene.appendChild(cards);
   }

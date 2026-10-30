@@ -118,7 +118,9 @@ export function getView(state) {
   const step = currentStep(state) || "listen";
   const sceneIndex = exp ? exp.current : 0;
   const sceneCount = exp && exp.rooms ? exp.rooms.length : 0;
-  const showHints = state.settings && state.settings.startersOnStage !== false;
+  // teacher hints (target/example) ALWAYS show on the GM console (M4: decoupled
+  // from the startersOnStage toggle, which only controls Stage sentence starters)
+  const showHints = true;
 
   const read = isStory
     ? (step === "result" && exp.outcome ? (exp.outcome.text || "") + (exp.outcome.bridge ? " " + exp.outcome.bridge : "") : (ev.read || room.flavour || ""))
@@ -202,12 +204,14 @@ export function getView(state) {
   };
 }
 
-// The Stage must never see teacher hints (target/example).
+// The Stage must never see teacher hints (target/example). Sentence starters
+// show on Stage cards only when the GM toggle is on (M4).
 export function getStageView(state) {
   const v = getView(state);
+  const startersOn = !state.settings || state.settings.startersOnStage !== false;
   return {
     ...v,
     hints: {},
-    cards: v.cards.map((c) => ({ key: c.key, id: c.id, label: c.label, kind: c.kind, stat: c.stat, stars: c.stars, starter: c.starter, bonusForActor: c.bonusForActor })),
+    cards: v.cards.map((c) => ({ key: c.key, id: c.id, label: c.label, kind: c.kind, stat: c.stat, stars: c.stars, starter: startersOn ? c.starter : "", bonusForActor: c.bonusForActor })),
   };
 }

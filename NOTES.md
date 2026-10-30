@@ -50,4 +50,5 @@
 - M3b: Talk it down - an episode combat scene can offer a "talk it down" card (harder roll via the story step machine); success clears the room with the scene outcome, failure resumes normal combat.
 - M3b: Reshuffle options - a reshuffleOptions action bumps the card seed; 4-choice scenes show 3, reshuffle changes the set.
 - M3b: Random Expedition challenge/trap rooms use the same story step machine (listen/choose/sayit/roll/result) with choices from content/approaches.json; challenge success heals, trap failure damages; advanceRoom now advances story rooms too.
+- M4: the mandatory M3b human playtest gate was skipped at the user's "continue until finished" - proceeding to M4 (Stage redesign) on their authority; the gate remains for M6.
 

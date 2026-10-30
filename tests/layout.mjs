@@ -159,7 +159,10 @@ try {
     const hasMonster = await evalJs(c.send, `!!document.querySelector('.stage .battle-enemies .enemy-slot canvas')`);
     if (hasMonster) { found = true; break; }
     const actions = [
-      `(()=>{const b=document.querySelector('[data-action="advance-room"]'); if(b){b.click(); return true;} return false;})()`,
+      `(()=>{const b=document.querySelector('[data-action="advance-room"]:not([disabled])'); if(b){b.click(); return true;} return false;})()`,
+      `(()=>{const b=document.querySelector('[data-action="choose-approach"]'); if(b){b.click(); return true;} return false;})()`,
+      `(()=>{const b=document.querySelector('[data-action="grade-story"][data-value="2"]'); if(b){b.click(); return true;} return false;})()`,
+      `(()=>{const b=document.querySelector('.primary-step[data-action="story-continue"]'); if(b){b.click(); return true;} return false;})()`,
       `(()=>{const b=document.querySelector('[data-action="use-skill"]'); if(b){b.click(); return true;} return false;})()`,
       `(()=>{const b=document.querySelector('[data-action="judge-lang"][data-value="2"]'); if(b){b.click(); return true;} return false;})()`,
       `(()=>{const b=document.querySelector('[data-action="skip-room"]'); if(b){b.click(); return true;} return false;})()`,
