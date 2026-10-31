@@ -111,6 +111,9 @@ function bootSingle() {
   if (popStage) popStage.addEventListener("click", () => openStageWindow());
 
   window.addEventListener("keydown", (ev) => {
+    // D13: never toggle the drawer while typing in an input/select/textarea
+    const t = ev.target;
+    if (t && (t.tagName === "INPUT" || t.tagName === "SELECT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
     const key = ev.key.toLowerCase();
     if (key === "g" && !ev.ctrlKey && !ev.metaKey && !ev.altKey) {
       toggle();

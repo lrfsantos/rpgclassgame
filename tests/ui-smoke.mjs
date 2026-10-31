@@ -128,6 +128,17 @@ try {
   await wait(400);
   assert(await drawerOpen() === false, "drawer closes on Escape");
 
+  // D13: G must NOT toggle the drawer while typing in an input (lobby has #gm-name)
+  await evaluate(send, `document.getElementById('gm-drawer-open').click()`);
+  await wait(300);
+  assert(await drawerOpen() === true, "drawer reopened for input test");
+  await evaluate(send, `(()=>{const i=document.getElementById('gm-name'); i.focus(); i.dispatchEvent(new KeyboardEvent('keydown', { key: 'g', bubbles: true })); return document.activeElement === i;})()`);
+  await wait(300);
+  assert(await drawerOpen() === true, "D13: G while typing in an input does not toggle the drawer");
+  // close the drawer again for a clean exit state
+  await evaluate(send, `document.getElementById('gm-drawer-close').click()`);
+  await wait(300);
+
   console.log(failures ? "\nSMOKE TEST FAILED" : "\nSMOKE TEST PASSED");
 } catch (e) {
   console.error("CRASH:", e);

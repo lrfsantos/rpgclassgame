@@ -372,6 +372,7 @@ body, button, input, select, textarea, .window, .muted, .log-entry { font-family
 .story-dialogue .typewriter, .story-dialogue .typewriter-caret { font-size: calc(44px * var(--ss)); }
 
 /* ============ PART 1B: GM primary / approaches / tools ============ */
+.gm .director-card { border: 3px solid var(--gold); background: var(--panel); padding: 12px 14px; margin: 12px 0; }
 .gm .primary-step-wrap { margin: 10px 0; }
 .gm .primary-step { font-size: 20px; padding: 10px 18px; }
 .gm .disabled-reason { margin-left: 8px; }

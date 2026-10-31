@@ -30,6 +30,9 @@ export function mountGm(container) {
   window.addEventListener("keydown", onKey);
 
   function onKey(ev) {
+    // D7: never let the hotkeys fire while typing in an input/select/textarea
+    const t = ev.target;
+    if (t && (t.tagName === "INPUT" || t.tagName === "SELECT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
     if (ev.repeat) return;
     if (ev.key === " " || ev.key === "Enter") {
       const primary = root.querySelector(".primary-step:not([disabled])");
@@ -243,7 +246,7 @@ function primaryLabel(s) {
   if (!step) return null;
   const isCombat = s.expedition && s.expedition.roomStatus === "combat";
   if (step === "listen") return { text: "Continue", reason: null };
-  if (step === "choose") return isCombat ? { text: "Attack (free) — or pick a skill (1-4)", reason: null } : { text: "Pick an approach (1-4)", reason: null };
+  if (step === "choose") return isCombat ? { text: "Attack (free) — or pick a skill (1-4)", reason: null } : { text: "Pick an approach (1-4)", reason: "Pick an approach" };
   if (step === "sayit") return isCombat ? { text: "Grade the answer (1=Weak 2=Good 3=Great)", reason: "Choose a grade" } : { text: "Grade the answer (1=Weak 2=Good 3=Great)", reason: "Choose a grade" };
   if (step === "roll") return { text: "Roll d20", reason: null };
   if (step === "result") return { text: "Next scene", reason: null };
@@ -397,7 +400,8 @@ function renderPlay(s) {
   }
   body.appendChild(panel);
 
-  // primary step control
+  // Director Card: one primary button + ONLY the current step's controls (M5).
+  const card = el("div", { class: "director-card" });
   const prim = primaryLabel(s);
   if (prim) {
     const p = el("div", { class: "primary-step-wrap" });
@@ -407,7 +411,7 @@ function renderPlay(s) {
     if (prim.reason) btn.title = prim.reason;
     p.appendChild(btn);
     if (prim.reason) p.appendChild(el("span", { class: "muted disabled-reason" }, prim.reason));
-    body.appendChild(p);
+    card.appendChild(p);
   }
 
   // CHOOSE: approach cards (story, from the view) or skills (combat)
@@ -426,7 +430,7 @@ function renderPlay(s) {
           class: "approach-btn",
         }, `${c.key}. ${c.label} — ${classNameStat(c.stat)} (${c.stars})`));
       });
-      body.appendChild(choose);
+      card.appendChild(choose);
     } else if (exp.roomStatus === "combat") {
       const actorC = s.players.find((p) => p.id === exp.activePlayerId);
       if (actorC && !actorC.npc) {
@@ -452,7 +456,7 @@ function renderPlay(s) {
             class: "approach-btn talk-btn",
           }, `${view.talkDown.label} (${classNameStat(view.talkDown.stat)} ${view.talkDown.difficulty}) — try words before swords`));
         }
-        body.appendChild(choose);
+        card.appendChild(choose);
       }
     }
   }
@@ -471,20 +475,22 @@ function renderPlay(s) {
     row.appendChild(el("button", { "data-action": act, "data-value": "2", class: "success" }, "2 · Good (+2)"));
     row.appendChild(el("button", { "data-action": act, "data-value": "4", class: "primary" }, "3 · Great (+4)"));
     say.appendChild(row);
-    body.appendChild(say);
+    card.appendChild(say);
   }
 
   // ROLL: show the d20 result (read-only on GM too)
   if (step === "roll" && exp.lastRoll) {
     const r = exp.lastRoll;
     const res = r.crit ? "CRIT!" : r.fumble ? "FUMBLE!" : r.success ? "success" : "fail";
-    body.appendChild(el("div", { class: "window" }, `d20=${r.d20} + mod ${r.mod} + lang ${r.langBonus} + story ${r.assistBonus} = ${r.total} vs ${r.difficulty} → ${res}`));
+    card.appendChild(el("div", { class: "window" }, `d20=${r.d20} + mod ${r.mod} + lang ${r.langBonus} + story ${r.assistBonus} = ${r.total} vs ${r.difficulty} → ${res}`));
   }
 
   // RESULT: (narration is in the log; primary advances)
   if (step === "result") {
-    body.appendChild(el("div", { class: "window" }, "Outcome shown on the Stage. Press Next scene to continue."));
+    card.appendChild(el("div", { class: "window" }, "Outcome shown on the Stage. Press Next scene to continue."));
   }
+
+  body.appendChild(card);
 
   // assists (during sayit/acting, other players can add to the story) — episode
   // story sayit/roll too (D5)
