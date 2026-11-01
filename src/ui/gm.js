@@ -26,6 +26,20 @@ export function mountGm(container) {
   render();
   subscribe(() => render());
 
+  // (F2d) refresh the Stage sync pill every second without a full re-render so
+  // a stale ack flips to "not detected" after ~3s.
+  const refreshPill = () => {
+    const s = getState();
+    const pill = root.querySelector("#gm-sync-pill");
+    const fresh = syncPill(s);
+    if (pill && pill.textContent !== fresh.textContent) {
+      pill.textContent = fresh.textContent;
+      pill.className = fresh.className;
+    }
+  };
+  const pillTimer = setInterval(refreshPill, 1000);
+  window.addEventListener("beforeunload", () => clearInterval(pillTimer));
+
   // keyboard: Space triggers the primary button; 1-4 approach; 1/2/3 grade
   window.addEventListener("keydown", onKey);
 
@@ -258,7 +272,35 @@ function renderTop(s) {
   const bar = stepBar(s);
   if (bar) wrap.appendChild(bar);
   wrap.appendChild(el("div", { class: "gm-hint" }, nextHint(s)));
+  wrap.appendChild(syncPill(s));
   return wrap;
+}
+
+// (F2d) Stage sync indicator. The Stage writes an ack to
+// "classroom-rpg-stage-ack" (never the save key) on every ingest; we compare
+// its rev against ours and show in-sync / behind / not-detected.
+const ACK_KEY = "classroom-rpg-stage-ack";
+function syncPill(s) {
+  const pill = el("span", { class: "sync-pill", id: "gm-sync-pill" }, "Stage: ...");
+  const ours = s && s.rev !== undefined ? s.rev : -1;
+  let ack = null;
+  try {
+    const raw = localStorage.getItem(ACK_KEY);
+    if (raw) {
+      const p = JSON.parse(raw);
+      if (p && p.session === (s && s.session) && typeof p.rev === "number") ack = p;
+    }
+  } catch (e) { /* ignore */ }
+  let label = "Stage: not detected";
+  let cls = "sync-none";
+  if (ack) {
+    const behind = ours - ack.rev;
+    if (behind <= 0) { label = `Stage: in sync (rev ${ours})`; cls = "sync-ok"; }
+    else { label = `Stage: behind (${behind})`; cls = "sync-behind"; }
+  }
+  pill.textContent = label;
+  pill.className = "sync-pill " + cls;
+  return pill;
 }
 
 function nextHint(s) {

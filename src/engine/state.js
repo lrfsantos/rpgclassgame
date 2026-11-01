@@ -17,7 +17,14 @@ export function subscribe(fn) {
 }
 
 function emit() {
-  for (const fn of subscribers) fn(state);
+  // (F2b) one failing render must never stop later updates from delivering.
+  for (const fn of [...subscribers]) {
+    try {
+      fn(state);
+    } catch (e) {
+      console.error("subscriber render error", e);
+    }
+  }
 }
 
 export function getState() {
@@ -90,7 +97,9 @@ export function getSessionId() {
 }
 
 function bumpRev() {
-  state.rev = (state.rev || 0) + 1;
+  // (F2a) rev is monotonic across undo/reset: a later undo must never lower the
+  // revision the Stage already saw, or the Stage would ignore the newer state.
+  state.rev = Math.max(state.rev || 0, monotonicRev) + 1;
   if (state.rev > monotonicRev) monotonicRev = state.rev;
 }
 

@@ -35,17 +35,95 @@ function bootStage() {
   state.init();
   mountStage(document.getElementById("stage"));
 
+  const DEBUG = new URLSearchParams(window.location.search).get("debug") === "1";
+  let lastSource = "none";
+  let lastUpdateAt = 0;
+  let lastRenderError = "";
+
   let got = false;
   const channel = openStageChannel((msg) => {
     if (msg.state) {
       got = true;
+      lastSource = "BC";
       applyIfNewer(msg.state);
+      ack(msg.state);
     }
   });
   const stopWatch = state.watchStorage((s) => {
     if (s === null) { /* save cleared */ return; }
+    lastSource = "storage";
     applyIfNewer(s);
+    ack(s);
   });
+
+  // (F2c) poll fallback: read the save key and apply if newer, covering dropped
+  // storage/broadcast events. Writes the ack each time it sees a new revision.
+  const poll = () => {
+    try {
+      const raw = localStorage.getItem("classroom-rpg-save-v1");
+      if (!raw) return;
+      const s = JSON.parse(raw);
+      if (!s || s.schema !== 2) return;
+      lastSource = "poll";
+      applyIfNewer(s);
+      ack(s);
+    } catch (e) { /* ignore */ }
+  };
+  setInterval(poll, 500);
+
+  // (F2c) direct transport (Stage side): accept postMessage from the GM that
+  // opened us, and pull window.opener.__rpgPublishable() every 300ms when the
+  // opener is same-origin (covers dropped postMessage / BC / storage events).
+  window.addEventListener("message", (ev) => {
+    if (ev.origin !== location.origin) return;
+    const msg = ev.data || {};
+    if (msg.type === "state" && msg.state) {
+      lastSource = "opener";
+      applyIfNewer(msg.state);
+      ack(msg.state);
+    }
+  });
+  if (window.opener && window.opener !== window) {
+    const pull = () => {
+      try {
+        if (window.opener && window.opener.__rpgPublishable) {
+          const s = window.opener.__rpgPublishable();
+          if (s) { lastSource = "opener-poll"; applyIfNewer(s); ack(s); }
+        }
+      } catch (e) { /* cross-origin or gone */ }
+    };
+    pull();
+    setInterval(pull, 300);
+  }
+
+  // (F2d) Stage writes its ack to a dedicated key (never the save key) so the GM
+  // can show the "Stage: in sync / behind / not detected" indicator.
+  const ACK_KEY = "classroom-rpg-stage-ack";
+  function ack(s) {
+    if (!s || s.rev === undefined) return;
+    try {
+      lastUpdateAt = Date.now();
+      localStorage.setItem(ACK_KEY, JSON.stringify({ session: s.session, rev: s.rev, t: Date.now() }));
+    } catch (e) { /* ignore */ }
+  }
+  window.__rpgStageAck = ack;
+
+  // (F2d) ?debug=1 corner overlay: session, rev, source, seconds since last
+  // update, last render error.
+  if (DEBUG) {
+    const box = document.createElement("div");
+    box.className = "stage-debug";
+    box.id = "stage-debug";
+    document.body.appendChild(box);
+    const refresh = () => {
+      const cur = state.getState();
+      const since = lastUpdateAt ? ((Date.now() - lastUpdateAt) / 1000).toFixed(1) : "-";
+      box.textContent = `session ${cur.session || "-"} rev ${cur.rev} src ${lastSource} last ${since}s err ${lastRenderError || "-"}`;
+    };
+    setInterval(refresh, 1000);
+    refresh();
+  }
+  window.addEventListener("error", (ev) => { lastRenderError = ev.message + " " + (ev.filename || "").split("/").pop() + ":" + (ev.lineno || ""); });
 
   // Pending request so a freshly opened GM answers immediately.
   const tryRequest = () => {
@@ -78,21 +156,39 @@ function applyIfNewer(s) {
 function bootGm() {
   state.init();
   mountGm(document.getElementById("gm"));
+  exposePublishable();
   const channel = openGmChannel(() => state.publishable());
   if (channel) {
-    state.subscribe(() => channel.broadcast());
+    state.subscribe(() => { channel.broadcast(); pushToStage(); });
     channel.broadcast();
     window.addEventListener("beforeunload", () => channel.close());
   }
 }
 
+// (F2c) direct transport: the GM keeps a reference to the Stage window it opened
+// and pushes state to it via postMessage after every mutation, in addition to
+// BroadcastChannel + the storage event.
+let stageWin = null;
+function exposePublishable() {
+  window.__rpgPublishable = () => state.publishable();
+  window.__rpgSetStageWin = (w) => { stageWin = w; };
+}
+function pushToStage() {
+  if (!stageWin) return;
+  try {
+    stageWin.postMessage({ type: "state", state: state.publishable() }, location.origin);
+  } catch (e) { /* ignore */ }
+}
+export { pushToStage };
+
 function bootSingle() {
   state.init();
+  exposePublishable();
   mountStage(document.getElementById("stage"));
   mountGm(document.getElementById("gm"));
   const channel = openGmChannel(() => state.publishable());
   if (channel) {
-    state.subscribe(() => channel.broadcast());
+    state.subscribe(() => { channel.broadcast(); pushToStage(); });
     channel.broadcast();
   }
 
@@ -124,7 +220,10 @@ function bootSingle() {
 }
 
 function openStageWindow() {
-  window.open("stage.html", "classroom-stage");
+  const w = window.open("stage.html", "classroom-stage");
+  if (w) {
+    if (window.__rpgSetStageWin) window.__rpgSetStageWin(w);
+  }
 }
 
 export { openStageWindow };
