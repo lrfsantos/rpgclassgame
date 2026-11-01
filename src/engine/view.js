@@ -161,6 +161,43 @@ export function getView(state) {
     fumble: exp.lastRoll.fumble,
   } : null;
 
+  // F4: a RESULT beat for every room kind once a room is cleared or defeated.
+  // Gives the class a clear "it is over" signal + the next room's name.
+  let roomResult = null;
+  if (exp && (exp.roomStatus === "cleared" || exp.roomStatus === "defeat")) {
+    const kind = room ? room.kind : "";
+    const won = exp.roomStatus === "cleared";
+    const monsterName = (exp.monster && exp.monster.name) || (room && room.event && room.event.monsterName) || "";
+    const nextRoom = exp.rooms && exp.rooms[sceneIndex + 1] ? (exp.rooms[sceneIndex + 1].name || null) : null;
+    const isLast = sceneIndex >= sceneCount - 1;
+    let text = "";
+    if (kind === "combat") {
+      text = won ? `Victory! ${monsterName} is defeated.` : "The party is overwhelmed...";
+    } else if (kind === "treasure") {
+      text = won ? "Treasure found! The party pockets gold and spark." : "";
+    } else if (kind === "rest") {
+      text = won ? "The party rests. Wounds mend, focus returns." : "";
+    } else if (kind === "event") {
+      text = won ? `A strange event unfolds: ${room.flavour || ""}` : "";
+    } else if (kind === "challenge") {
+      text = won ? "The challenge is conquered. The path opens." : "The challenge defeats the party's best efforts...";
+    } else if (kind === "trap") {
+      text = won ? "The trap is disarmed. The party slips past." : "The trap springs! The party is caught...";
+    } else {
+      text = won ? "The room is cleared." : "The party is overwhelmed...";
+    }
+    roomResult = {
+      kind,
+      won,
+      monsterName,
+      text,
+      nextRoom,
+      isLast,
+      score: state.party ? state.party.score : 0,
+      gold: state.party ? state.party.gold : 0,
+    };
+  }
+
   let tip = "";
   if (isStory) {
     if (step === "listen") tip = ev.ask ? `Ask the class: ${ev.ask}` : "Read this aloud, then ask the class what they do.";
@@ -190,6 +227,7 @@ export function getView(state) {
     assistUsed: exp ? exp.assistUsed || [] : [],
     roll: step === "roll" ? null : roll,
     outcome: exp && exp.outcome ? { success: exp.outcome.success, crit: exp.outcome.crit, fumble: exp.outcome.fumble, text: exp.outcome.text, item: exp.outcome.item, bridge: exp.outcome.bridge } : null,
+    roomResult,
     hints,
     tip,
     mode: exp ? exp.mode : null,

@@ -263,7 +263,10 @@ function primaryLabel(s) {
   if (step === "choose") return isCombat ? { text: "Attack (free) — or pick a skill (1-4)", reason: null } : { text: "Pick an approach (1-4)", reason: "Pick an approach" };
   if (step === "sayit") return isCombat ? { text: "Grade the answer (1=Weak 2=Good 3=Great)", reason: "Choose a grade" } : { text: "Grade the answer (1=Weak 2=Good 3=Great)", reason: "Choose a grade" };
   if (step === "roll") return { text: "Roll d20", reason: null };
-  if (step === "result") return { text: "Next scene", reason: null };
+  if (step === "result") {
+    const isEp = s.expedition && s.expedition.mode === "episode";
+    return isEp ? { text: "Next scene", reason: null } : { text: "Next room", reason: null };
+  }
   return null;
 }
 

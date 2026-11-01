@@ -278,10 +278,19 @@ function renderCombat(v, s) {
       labels.appendChild(el("span", { class: "cmd" }, `${sk ? sk.name : "skill"} (${sk ? sk.cost : 0} F)`));
     }
     menu.appendChild(labels);
-  } else if (v.roomStatus === "cleared") {
-    menu.appendChild(el("span", { class: "muted" }, "Room cleared — wait for the teacher."));
-  } else if (v.roomStatus === "defeat") {
-    menu.appendChild(el("span", { class: "roll-fail" }, "The party is overwhelmed..."));
+  } else if (v.roomStatus === "cleared" || v.roomStatus === "defeat") {
+    // F4: RESULT beat for every room kind — a clear "this room is over" signal.
+    const rr = v.roomResult || { won: v.roomStatus === "cleared", text: "", monsterName: "", nextRoom: null, isLast: false, score: v.spark, gold: 0 };
+    const isCombatDown = v.monster && v.monster.hp === 0 && rr.monsterName;
+    const title = isCombatDown ? `Victory! ${rr.monsterName} is defeated.` : (rr.won ? rr.text || "Room cleared." : "Defeat");
+    const res = el("div", { class: "room-result" + (rr.won ? "" : " room-result-fail") });
+    res.appendChild(el("div", { class: "room-result-title" }, title));
+    if (!isCombatDown && rr.won && rr.text) res.appendChild(el("div", { class: "room-result-line" }, rr.text));
+    if (!rr.won) res.appendChild(el("div", { class: "room-result-line" }, rr.text || "The party is overwhelmed..."));
+    res.appendChild(el("div", { class: "room-result-line" }, `Spark ${rr.score} · Gold ${rr.gold}`));
+    if (rr.isLast) res.appendChild(el("div", { class: "room-result-next" }, "The expedition is complete!"));
+    else if (rr.nextRoom) res.appendChild(el("div", { class: "room-result-next" }, `Next: ${rr.nextRoom}`));
+    menu.appendChild(res);
   } else if (v.read) {
     menu.appendChild(el("span", { class: "muted" }, v.read));
   }
