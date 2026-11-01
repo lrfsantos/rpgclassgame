@@ -77,8 +77,8 @@ async function resetGame(c) {
 async function playOnce(c, grade) {
   // grade: "great"|"weak" — grades every SAY IT accordingly (1=Weak 3=Great)
   const stageHints = [];
-  let recapReached = false;
-  let noPrimary = 0;
+  const storyItemsSeen = [];
+  let recapReached = false;  let noPrimary = 0;
   const badDisabled = [];
   let spriteFails = 0;
   let outcomeMismatch = 0;
@@ -116,6 +116,8 @@ async function playOnce(c, grade) {
     // textContent: the typewriter prints progressively so textContent is partial)
     const stageText = await evalJs(c.send, `document.querySelector('#stage') ? document.querySelector('#stage').textContent : ''`);
     for (const h of hints) if (h && stageText.includes(h)) stageHints.push(h);
+    const itemStrip = await evalJs(c.send, `(()=>{const e=document.querySelector('#stage .story-items'); return e?e.textContent.replace(/\\s+/g,' ').trim():'';})()`);
+    if (itemStrip) storyItemsSeen.push(itemStrip);
     const stageDlg = await evalJs(c.send, `(()=>{const e=document.querySelector('#stage .story-dialogue[data-narration]'); return e?e.getAttribute('data-narration'):'';})()`);
     // typewriter: a fresh dialogue must complete to full data-narration within 5s,
     // and Enter (or click) must skip a partial dialogue to the full text (once)
@@ -181,19 +183,26 @@ async function playOnce(c, grade) {
 
     // FIRST-TIME-USER DRIVING: only primary (Space) + number keys
     if (stepNow === "CHOOSE") {
-      // story approach: prefer a flagged choice, dispatch its letter key (A/B/C).
-      // combat: click the first enabled skill (letters do nothing in combat).
+      // story approach: prefer this scene's item-granting choice so the M6 items
+      // are actually earned; if it is not among the shown cards, Reshuffle and
+      // retry next iteration. combat: click the first enabled skill.
       const picked = await evalJs(c.send, `(()=>{
         const btns=[...document.querySelectorAll('[data-action="choose-approach"]')];
         if(btns.length){
-          const b=btns[0];
-          return b.getAttribute('data-approach-key');
+          const grant = ${JSON.stringify((scenes[cur] && Array.isArray(scenes[cur].choices)) ? (scenes[cur].choices.find((c)=>c&&c.grants)||{}).id||null : null)};
+          if(grant){
+            const b=btns.find((x)=>x.getAttribute('data-value')===grant);
+            if(b) return b.getAttribute('data-approach-key');
+            const rs=document.querySelector('[data-action="reshuffle-options"]');
+            if(rs && !rs.disabled){ rs.click(); return '__reshuffle__'; }
+          }
+          return btns[0].getAttribute('data-approach-key');
         }
         const sk=document.querySelector('[data-action="use-skill"]:not([disabled])');
         if(sk){ sk.click(); return '__skill__'; }
         return null;
       })()`);
-      if (picked && picked !== "__skill__") await key(c.send, picked);
+      if (picked && picked !== "__skill__" && picked !== "__reshuffle__") await key(c.send, picked);
       await wait(200);
       continue;
     }
@@ -207,7 +216,7 @@ async function playOnce(c, grade) {
     await wait(200);
   }
 
-  return { stageHints, recapReached, noPrimary, badDisabled, spriteFails, outcomeMismatch, listenOracles, resultOracles, minFont, minContrast, steps, stuck, didTypeCheck, skipOK, skipFail, autoCompleteOK, autoCompleteFail };
+  return { stageHints, storyItemsSeen, recapReached, noPrimary, badDisabled, spriteFails, outcomeMismatch, listenOracles, resultOracles, minFont, minContrast, steps, stuck, didTypeCheck, skipOK, skipFail, autoCompleteOK, autoCompleteFail };
 }
 
 try {
@@ -238,6 +247,12 @@ try {
   const parsedG = saveG ? JSON.parse(saveG) : null;
   assert(!!parsedG && parsedG.expedition && parsedG.expedition.outcome && parsedG.expedition.outcome.text && parsedG.expedition.outcome.text.length > 0, "great run: expedition.outcome.text set at recap");
   assert(parsedG && parsedG.expedition && Array.isArray(parsedG.expedition.items), "great run: expedition.items is an array at recap");
+  const itemLabels = (parsedG && parsedG.expedition && parsedG.expedition.items || []).map((it) => (typeof it === "string" ? it : it.label));
+  assert(itemLabels.length >= 1, `great run: at least one item granted via a successful roll (got ${JSON.stringify(itemLabels)})`);
+  const stripSeen = (great.storyItemsSeen || []).join(" ");
+  for (const got of itemLabels) {
+    assert(stripSeen.includes(got), `great run: Stage "Found:" strip shows granted item "${got}" (saw ${JSON.stringify(great.storyItemsSeen)})`);
+  }
   if (c.exceptions.length) c.exceptions.forEach((e) => console.error("exc:", e));
   assert(c.exceptions.length === 0, `great run: no console exceptions (got ${c.exceptions.length})`);
 

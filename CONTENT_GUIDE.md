@@ -24,6 +24,17 @@ An episode is an ordered list of scenes. Each scene needs:
 
 ```json
 {
+  "id": "unique-episode-id",
+  "name": "The Bell of Bellingham",
+  "goal": "One-line goal shown on the Stage.",      // shown at the top of every scene
+  "scenes": [ ... ]
+}
+```
+
+Each scene needs:
+
+```json
+{
   "id": "unique-scene-id",
   "kind": "story",                       // "story" or "combat"
   "stat": "heart",                       // story scenes only: might/agility/mind/heart
@@ -37,7 +48,11 @@ An episode is an ordered list of scenes. Each scene needs:
   },
   "onGood": "Narration when graded Good or Great.",
   "onBad": "Narration when graded Weak.",
-  "flags": { "someFlagName": true },     // optional: set on a Good/Great grade
+  "flag": "someFlagName",                // optional: set on a Good/Great grade
+  "grants": {                            // optional: set a flag AND give the class an item
+    "flag": "someFlagName",
+    "label": "Item's display name"       // shows on the Stage "Found:" strip
+  },
   "conditional": {                        // optional: branch on a flag set earlier
     "flag": "someFlagName",
     "whenSet": { "difficulty": 11, "flavour": "…" },
@@ -48,16 +63,21 @@ An episode is an ordered list of scenes. Each scene needs:
 
 Rules:
 - A **story** scene is a language check + d20 roll. The teacher grades the
-  class's spoken answer; grading Good/Great narrates `onGood` and sets `flags`;
-  grading Weak narrates `onBad` and sets nothing. The roll still adds tension
-  and score.
+  class's spoken answer; grading Good/Great narrates `onGood` and sets the
+  `flag`/`grants`; grading Weak narrates `onBad` and sets nothing. The roll
+  still adds tension and score.
+- `grants` is how an episode gives named items (e.g. Elder's Map, Toll-keeper's
+  Rope, Owl's Feather). It sets the same flag as `flag` and adds an item to the
+  "Found:" strip on the Stage — use a friendly display name for `label`. An item
+  that grants a later bonus should be referenced by its `flag` in a later
+  scene's `conditional`.
 - A **combat** scene reuses the expedition combat engine against the referenced
   monster; its `prompt`/`onGood`/`onBad` also apply to the pre-fight language
   check.
 - `conditional` resolves the scene's difficulty and flavour from a flag that an
   earlier scene may have set — use it to make the story react to what the class
-  said (e.g. "The Bell of Bellingham": the clapper scene is easier if the toll
-  bridge was crossed politely).
+  said (e.g. "The Bell of Bellingham": the clapper scene is easier if the class
+  earned the Toll-keeper's Rope at the bridge).
 - Keep vocabulary A2–B2, keep prompts short, keep tone warm and safe. Every
   scene's `prompt` needs all three of text/target/example.
 

@@ -175,6 +175,13 @@ function renderStory(v, s) {
     dlg.setAttribute("data-narration", v.read);
     wrap.appendChild(dlg);
   }
+  // items gathered so far (M6): visible proof the class earned them
+  if (v.items && v.items.length) {
+    const strip = el("div", { class: "story-items" });
+    strip.appendChild(el("span", { class: "story-items-label" }, "Found:"));
+    v.items.forEach((it) => strip.appendChild(el("span", { class: "story-item" }, it.label || it.id)));
+    wrap.appendChild(strip);
+  }
   return wrap;
 }
 

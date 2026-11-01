@@ -172,6 +172,7 @@ function validateEpisodes(data) {
     errs.push(
       ...fail(typeof ep.id === "string" && ep.id, `[${i}] missing id`),
       ...fail(typeof ep.name === "string" && ep.name, `episode ${ep.id}: missing name`),
+      ...fail(typeof ep.goal === "string" && ep.goal, `episode ${ep.id}: missing goal (shown on Stage)`),
       ...fail(Array.isArray(ep.scenes) && ep.scenes.length >= 3, `episode ${ep.id}: need at least 3 scenes`),
       ...fail(Array.isArray(ep.scenes) && ep.scenes.every((sc) => SCENE_KINDS.includes(sc.kind) && typeof sc.id === "string" && typeof sc.flavour === "string"), `episode ${ep.id}: every scene needs id, kind (story|combat), flavour`)
     );
@@ -191,6 +192,8 @@ function validateEpisodes(data) {
             errs.push(...fail(CHOICE_KEYS.filter((k) => k !== "difficulty").every((key) => typeof c[key] === "string"), `episode ${ep.id}: scene ${sc.id} choice ${c.id || k} needs ${CHOICE_KEYS.filter((x) => x !== "difficulty").join("/")} as strings`));
             errs.push(...fail(STATS.includes(c.stat), `episode ${ep.id}: scene ${sc.id} choice ${c.id} bad stat "${c.stat}"`));
             errs.push(...fail(Number.isFinite(c.difficulty), `episode ${ep.id}: scene ${sc.id} choice ${c.id} needs numeric difficulty`));
+            errs.push(...fail(c.flag === undefined || typeof c.flag === "string", `episode ${ep.id}: scene ${sc.id} choice ${c.id} flag must be a string`));
+            errs.push(...fail(c.grants === undefined || (c.grants && typeof c.grants.flag === "string" && typeof c.grants.label === "string"), `episode ${ep.id}: scene ${sc.id} choice ${c.id} grants needs {flag, label} strings`));
           });
         }
       } else {

@@ -4,6 +4,7 @@
     {
       "id": "the-bell-of-bellingham",
       "name": "The Bell of Bellingham",
+      "goal": "Reach the top of the sunken tower, recover the clapper, and ring the bell to wake the village.",
       "flavour": "The village bell has not rung in a hundred years. The Moss King took the clapper to the top of the sunken tower. The party climbs to wake the bell.",
       "scenes": [
         {
@@ -21,7 +22,8 @@
               "example": "We will wake the bell today, no matter what!",
               "onGood": "The Elder smiles and hands you a map of the tower.",
               "onBad": "The Elder nods slowly. 'Hm. We shall see.'",
-              "flag": "elderTrusted"
+              "flag": "elderTrusted",
+              "grants": { "flag": "elderTrusted", "label": "Elder's Map" }
             },
             {
               "id": "explain-kindly",
@@ -73,7 +75,8 @@
               "example": "Could we please cross the bridge, kind keeper?",
               "onGood": "The keeper shrugs and lowers the rope. 'Fine. Go on, then.'",
               "onBad": "The keeper shakes his head. 'No sweet words, no crossing.'",
-              "flag": "crossedBridge"
+              "flag": "crossedBridge",
+              "grants": { "flag": "crossedBridge", "label": "Toll-keeper's Rope" }
             },
             {
               "id": "make-a-deal",
@@ -85,7 +88,8 @@
               "example": "If you let us cross, we will bring you a bell's tune.",
               "onGood": "The keeper's eyes light up. 'A tune? Deal!'",
               "onBad": "The keeper taps his coins. 'Not good enough.'",
-              "flag": "crossedBridge"
+              "flag": "crossedBridge",
+              "grants": { "flag": "crossedBridge", "label": "Toll-keeper's Rope" }
             },
             {
               "id": "tell-a-joke",
@@ -115,7 +119,8 @@
               "example": "The more you take from a hole, the bigger the hole gets.",
               "onGood": "The owl hoots happily and points to a hidden path.",
               "onBad": "The owl shakes its head. 'That is a hole, not an answer.'",
-              "flag": "owlHelp"
+              "flag": "owlHelp",
+              "grants": { "flag": "owlHelp", "label": "Owl's Feather" }
             },
             {
               "id": "reason-aloud",

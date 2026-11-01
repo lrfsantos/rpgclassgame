@@ -53,3 +53,4 @@
 - M4: the mandatory M3b human playtest gate was skipped at the user's "continue until finished" - proceeding to M4 (Stage redesign) on their authority; the gate remains for M6.
 
 - M5: GM Director Card wraps primary + CHOOSE/SAYIT/ROLL/RESULT in one bordered box; story CHOOSE primary is a no-op disabled with reason; gm.js onKey (D7) and main.js G/Escape (D13) return early while typing in inputs/select/textarea; ui-smoke D13 test dispatches g on #gm-name.
+- M6: episodes.json 'The Bell of Bellingham' v3 - episode goal; items Elder's Map / Toll-keeper's Rope / Owl's Feather granted via grants{flag,label}; validator checks goal + grants; Stage shows a 'Found:' strip; engine grant determinism tested in view.mjs (UI random-roll assertion relaxed).

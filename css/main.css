@@ -370,6 +370,15 @@ body, button, input, select, textarea, .window, .muted, .log-entry { font-family
   font-family: var(--font-body); color: var(--bone); font-size: calc(44px * var(--ss));
 }
 .story-dialogue .typewriter, .story-dialogue .typewriter-caret { font-size: calc(44px * var(--ss)); }
+.story-items {
+  display: flex; align-items: center; gap: calc(12px * var(--ss));
+  border-top: 1px solid var(--panel-line); background: var(--panel);
+  padding: calc(8px * var(--ss)) calc(20px * var(--ss));
+  font-family: var(--font-body); font-size: calc(32px * var(--ss));
+}
+.story-items-label { color: var(--bone-dim); }
+.story-item { color: var(--gold); font-weight: 700; }
+.story-item::before { content: "◆ "; color: var(--gold); }
 
 /* ============ PART 1B: GM primary / approaches / tools ============ */
 .gm .director-card { border: 3px solid var(--gold); background: var(--panel); padding: 12px 14px; margin: 12px 0; }

@@ -5,6 +5,7 @@ import { loadContent, getContent } from "file:///C:/Users/luiza/Documents/protog
 import * as stateMod from "file:///C:/Users/luiza/Documents/protogame/src/engine/state.js";
 import * as actions from "file:///C:/Users/luiza/Documents/protogame/src/engine/actions.js";
 import { getView, getStageView, currentStep } from "file:///C:/Users/luiza/Documents/protogame/src/engine/view.js";
+import { readFileSync } from "node:fs";
 
 const store = {};
 globalThis.localStorage = { getItem: (k) => (k in store ? store[k] : null), setItem: (k, v) => { store[k] = String(v); }, removeItem: (k) => { delete store[k]; } };
@@ -159,6 +160,50 @@ assert(v.outcome && v.outcome.success === false, "rollStory(1) outcome.success f
 assert(v.outcome && v.outcome.text && v.outcome.text.length > 0, "rollStory(1) outcome.text set (onBad)");
 assert((stateMod.getState().expedition.items || []).length === itemsBefore, "rollStory(1) added no item");
 assert(s.party.score === sparkBefore + 1, "rollStory(1) applied Spark +1 (got " + (s.party.score - sparkBefore) + ")");
+
+// M6: each named item is granted by its scene's choice on a successful roll.
+// Drive to the target scene, pick the grant choice, roll 20 (guaranteed crit).
+const EPISODE = JSON.parse(readFileSync("C:/Users/luiza/Documents/protogame/content/episodes.json", "utf8"));
+const M6_ITEMS = [
+  { sceneId: "the-quiet-village", item: "Elder's Map" },
+  { sceneId: "the-toll-bridge", item: "Toll-keeper's Rope" },
+  { sceneId: "the-dark-forest", item: "Owl's Feather" },
+];
+for (const { sceneId, item } of M6_ITEMS) {
+  freshEpisode();
+  let got = null;
+  let n = 0;
+  while (n++ < 60) {
+    s = stateMod.getState();
+    v = getView(s);
+    const exp = s.expedition;
+    const room = exp.rooms[exp.current] || {};
+    const atTarget = room.id === sceneId;
+    if (exp.mode !== "episode") break;
+    if (exp.roomStatus === "cleared" || exp.roomStatus === "defeat") { actions.advanceRoom(); }
+    else if (exp.roomStatus === "story") {
+      if (exp.step === "listen") { actions.storyContinue(); }
+      else if (exp.step === "choose") {
+        const sc = EPISODE.episodes[0].scenes.find((x) => x.id === room.id) || {};
+        let choice = (v.cards || [])[0];
+        if (atTarget) {
+          const grant = (sc.choices || []).find((c) => c.grants && c.grants.label === item);
+          if (grant) choice = (v.cards || []).find((c) => c.id === grant.id) || null;
+          if (choice === null) { actions.reshuffleOptions(); continue; }
+        }
+        actions.chooseStoryApproach(choice.id);
+      }
+      else if (exp.step === "sayit") { actions.gradeStory(4); }
+      else if (exp.step === "roll") { actions.rollStory(20); }
+      else { actions.storyContinue(); }
+    }
+    else { actions.advanceRoom(); }
+    s = stateMod.getState();
+    const expItems = (s.expedition.items || []).map((it) => (typeof it === "string" ? it : it.label));
+    if (expItems.includes(item)) { got = item; break; }
+  }
+  assert(got === item, `M6: "${item}" granted on a successful roll (scene ${sceneId})`);
+}
 
 // assist cap +2: two different assisters cap the bonus, a third is ignored
 freshEpisode();
