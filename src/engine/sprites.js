@@ -165,8 +165,10 @@ function applyFrameVariants(key, frameName, w, h) {
   return c;
 }
 
-// Get the list of canvas frames for a character/monster key. If a real PNG
+// Get the SOURCE canvas frames for a character/monster key. If a real PNG
 // exists it would be drawn here; placeholder is the default (art pending).
+// The source is cached and NEVER mounted: mountSprite() copies it into a fresh
+// canvas so that two slots of the same class/frame cannot steal each other.
 export function getSpriteFrames(key, frameName) {
   const meta = getSpriteMeta(key);
   const w = meta ? meta.frameWidth : 64;
@@ -174,19 +176,26 @@ export function getSpriteFrames(key, frameName) {
   const id = `${key}:${frameName}`;
   if (cache.has(id)) return cache.get(id);
   const canvas = applyFrameVariants(key, frameName, w, h);
-  canvas.dataset.key = key;
-  canvas.className = "pixel-sprite";
   cache.set(id, canvas);
   return canvas;
 }
 
 // Draw a character/monster into a container element, sized to pixel ratio.
+// A NEW canvas is created on every call (drawing the cached source) so that
+// reusing the same element cannot move a sprite between slots.
 export function mountSprite(container, key, frameName = "idle-1", scale = 4) {
   container.innerHTML = "";
-  const canvas = getSpriteFrames(key, frameName);
-  canvas.style.width = canvas.width * (scale / PLACEHOLDER_SCALE) + "px";
-  canvas.style.height = canvas.height * (scale / PLACEHOLDER_SCALE) + "px";
-  canvas.classList.add("pixel-sprite");
+  const source = getSpriteFrames(key, frameName);
+  const canvas = document.createElement("canvas");
+  canvas.width = source.width;
+  canvas.height = source.height;
+  canvas.dataset.key = key;
+  canvas.className = "pixel-sprite";
+  canvas.style.width = source.width * (scale / PLACEHOLDER_SCALE) + "px";
+  canvas.style.height = source.height * (scale / PLACEHOLDER_SCALE) + "px";
+  const ctx = canvas.getContext("2d");
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(source, 0, 0);
   container.appendChild(canvas);
   return canvas;
 }
