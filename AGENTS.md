@@ -4,6 +4,31 @@ Project folder: C:\Users\luiza\Documents\protogame (Windows). Work ONLY inside i
 
 ---
 
+## ROADMAP (Part 1.2 — source of truth for the current milestone work)
+
+Work happens on branch `wip/part-1-2` (do NOT push `main`). One milestone per
+session, in order. After each milestone: run all tests, report, stop for review.
+
+- **M1 Sync** — DONE+TESTED (`357fa6c` on main). rev + publishable broadcast/save
+  (D14), Stage ingests via BroadcastChannel + storage event (D9), fixed popup name.
+- **M2 Single view source (view.js)** — DONE+TESTED. stage/gm render from
+  getView/getStageView (D3/D8/D11), currentStep lives in view.js.
+- **M3 Flow & dice** — DONE+TESTED (`80fea04` M3a, `5787a8e` M3b). rollStory,
+  grantAssist in story (D5), dice-own-moment (D4), talk-it-down (D6), reshuffle,
+  approaches.json challenge/trap story machine.
+- **M4 Stage redesign** — DONE+TESTED (`86e8b45`). sentence starters setting +
+  decoupled teacher hints; layout driver update.
+- **M5 GM Director Card** — DONE+TESTED (`8dc0789` + `82284c8`). D1 no-op primary,
+  D7/D13 hotkeys ignored in inputs, .director-card wrapper.
+- **M6 Content v3** — DONE+TESTED (`703af1e`). episodes.json "The Bell of
+  Bellingham" goal + items (Elder's Map, Toll-keeper's Rope, Owl's Feather) via
+  grants, validator checks, Stage "Found:" strip, CONTENT_GUIDE.
+- **Part 2 / Part 3** — NEXT (separate sessions, in order).
+
+Report format and working rules: see section 1 (HOW TO WORK) and section 8.
+
+---
+
 ## 1. HOW TO WORK (applies to every task; this is the most important section)
 
 Goal: reach the result in the fewest steps and tokens without lowering quality. Think in dependency order, act on evidence, never repeat work.
