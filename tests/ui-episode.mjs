@@ -98,6 +98,13 @@ async function playOnce(c, grade) {
   let didTypeCheck = false;
   let typeCheckedOn = "";
   let skipOK = 0, skipFail = 0, autoCompleteOK = 0, autoCompleteFail = 0;
+  // F3 story-stage beats
+  let rollUnknownSeen = 0;
+  let resultD20Ok = 0;
+  let resultD20Mismatch = 0;
+  let partyRowOk = 0;
+  let partyRowFail = 0;
+  let turnBannerSeen = 0;
 
   while (steps++ < safety) {
     if (await evalJs(c.send, `/STORY COMPLETE!|STORY OVER/.test(document.body.textContent)`)) { recapReached = true; break; }
@@ -145,6 +152,7 @@ async function playOnce(c, grade) {
     const save = saveRaw ? JSON.parse(saveRaw) : null;
     const exp = save && save.expedition ? save.expedition : null;
     const cur = exp ? exp.current : -1;
+    const isStoryStep = exp && exp.rooms && exp.rooms[cur] && exp.rooms[cur].event && exp.rooms[cur].event.type === "story";
     if (stepNow === "LISTEN" && exp && exp.rooms && exp.rooms[cur] && exp.rooms[cur].event && exp.rooms[cur].event.type === "story") {
       const sc = scenes[cur];
       if (sc) {
@@ -165,6 +173,32 @@ async function playOnce(c, grade) {
         if (expect && (stageDlg || stageText).includes(expect.slice(0, 40))) { resultOracles++; }
         else { outcomeMismatch++; console.error("  ORACLE RESULT: expected", JSON.stringify(expect.slice(0, 40)), "success=" + exp.lastRoll.success, "dlg:", JSON.stringify(stageDlg.slice(0, 80)), "stage:", JSON.stringify(stageText.slice(0, 80))); }
       }
+    }
+
+    // F3 story-stage beats: ROLL shows a big "?" d20; RESULT shows the real d20
+    // face equal to lastRoll.d20; the party row (all heroes) and turn banner are
+    // present at every story step.
+    if (stepNow === "ROLL") {
+      const unk = await evalJs(c.send, `(()=>{const e=document.querySelector('#stage .story .d20-face.d20-unknown'); return !!e && e.textContent.trim()==='?';})()`);
+      if (unk) rollUnknownSeen++;
+    }
+    if (stepNow === "RESULT" && isStoryStep && exp && exp.lastRoll) {
+      // the Stage re-renders a beat after the GM advances; poll briefly for the
+      // result d20 face to appear before declaring a mismatch
+      let shown = null;
+      for (let k = 0; k < 5 && shown === null; k++) {
+        shown = await evalJs(c.send, `(()=>{const e=document.querySelector('#stage .story-result .d20-face'); return e?e.textContent.trim():null;})()`);
+        if (shown === null) await wait(120);
+      }
+      if (shown !== null && String(exp.lastRoll.d20) === shown) resultD20Ok++;
+      else { resultD20Mismatch++; console.error("  F3 RESULT d20: expected", exp.lastRoll.d20, "shown", JSON.stringify(shown)); }
+    }
+    if (isStoryStep) {
+      const partyN = await evalJs(c.send, `(()=>document.querySelectorAll('#stage .story .story-party .story-hero').length)()`);
+      const partyOk = await evalJs(c.send, `(()=>{const slots=[...document.querySelectorAll('#stage .story .story-party .story-hero')]; return slots.length>0 && slots.every(s=>{const c=s.querySelector('canvas'); if(!c) return false; let nt=0; try{const d=c.getContext('2d').getImageData(0,0,c.width,c.height).data; for(let i=3;i<d.length;i+=4){if(d[i]>0){nt=1;break;}}}catch(e){} const r=c.getBoundingClientRect(); return nt===1&&r.width>0&&r.height>0&&r.left>=0&&r.top>=0&&r.right<=document.documentElement.clientWidth&&r.bottom<=document.documentElement.clientHeight;});})()`);
+      if (partyOk) partyRowOk++; else { partyRowFail++; console.error("  F3 party row: not ok at", stepNow, "slots", partyN); }
+      const banner = await evalJs(c.send, `(()=>{const b=document.querySelector('#stage .story .turn-banner'); return b?b.textContent.trim():null;})()`);
+      if (banner) turnBannerSeen++;
     }
 
     // primary step button enabled?
@@ -216,7 +250,7 @@ async function playOnce(c, grade) {
     await wait(200);
   }
 
-  return { stageHints, storyItemsSeen, recapReached, noPrimary, badDisabled, spriteFails, outcomeMismatch, listenOracles, resultOracles, minFont, minContrast, steps, stuck, didTypeCheck, skipOK, skipFail, autoCompleteOK, autoCompleteFail };
+  return { stageHints, storyItemsSeen, recapReached, noPrimary, badDisabled, spriteFails, outcomeMismatch, listenOracles, resultOracles, minFont, minContrast, steps, stuck, didTypeCheck, skipOK, skipFail, autoCompleteOK, autoCompleteFail, rollUnknownSeen, resultD20Ok, resultD20Mismatch, partyRowOk, partyRowFail, turnBannerSeen };
 }
 
 try {
@@ -243,6 +277,10 @@ try {
   assert(great.didTypeCheck, "great run: typewriter check ran on a story dialogue");
   assert(great.skipFail === 0, `great run: Enter/click skips the typewriter to the full text (${great.skipOK} skipped, ${great.skipFail} failed)`);
   assert(great.autoCompleteFail === 0, `great run: dialogue textContent equals full data-narration within 5s on its own (${great.autoCompleteOK} completed, ${great.autoCompleteFail} timed out)`);
+  assert(great.rollUnknownSeen > 0, `great run: ROLL step shows the big '?' d20 on Stage (saw ${great.rollUnknownSeen})`);
+  assert(great.resultD20Ok > 0 && great.resultD20Mismatch === 0, `great run: RESULT step shows the real d20 face = lastRoll.d20 (ok ${great.resultD20Ok}, mismatch ${great.resultD20Mismatch})`);
+  assert(great.partyRowOk > 0 && great.partyRowFail === 0, `great run: party row (all heroes) present + non-transparent + in-view at every story step (ok ${great.partyRowOk}, fail ${great.partyRowFail})`);
+  assert(great.turnBannerSeen > 0, `great run: '<Name>'s turn' banner shown on Stage (saw ${great.turnBannerSeen})`);
   const saveG = await evalJs(c.send, `localStorage.getItem('classroom-rpg-save-v1')`);
   const parsedG = saveG ? JSON.parse(saveG) : null;
   assert(!!parsedG && parsedG.expedition && parsedG.expedition.outcome && parsedG.expedition.outcome.text && parsedG.expedition.outcome.text.length > 0, "great run: expedition.outcome.text set at recap");

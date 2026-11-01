@@ -392,6 +392,35 @@ body, button, input, select, textarea, .window, .muted, .log-entry { font-family
 .story-item { color: var(--gold); font-weight: 700; }
 .story-item::before { content: "◆ "; color: var(--gold); }
 
+/* F3 story stage: persistent party row, turn banner, result beat */
+.story-top .spark-count { font-size: calc(32px * var(--ss)); }
+.story-items-top { font-size: calc(26px * var(--ss)); border: none; padding: 0; background: none; }
+.story-party { display: flex; align-items: flex-end; gap: calc(10px * var(--ss)); }
+.story-party .story-hero.active { transform: translateY(calc(-8px * var(--ss))); }
+.story-party .story-hero.active .pname-tag { color: var(--gold); }
+.turn-banner {
+  position: absolute; top: calc(8px * var(--ss)); left: 50%; transform: translateX(-50%);
+  font-family: var(--font-body); font-weight: 700; color: var(--gold);
+  font-size: calc(34px * var(--ss)); background: #0008; padding: calc(4px * var(--ss)) calc(14px * var(--ss));
+  border: 2px solid var(--gold);
+}
+.story-scene .turn-banner { z-index: 3; }
+.approach-kind { font-family: var(--font-body); color: var(--ember); font-size: calc(26px * var(--ss)); text-transform: uppercase; }
+.approach-stars { font-family: var(--font-body); color: var(--gold); font-size: calc(28px * var(--ss)); }
+.approach-bonus { font-family: var(--font-body); color: var(--moss); font-size: calc(26px * var(--ss)); }
+.d20-face.d20-unknown { color: var(--bone-dim); }
+.story-result { display: flex; flex-direction: column; align-items: center; gap: calc(10px * var(--ss)); }
+.story-result .roll-line { font-size: calc(30px * var(--ss)); }
+.story-result .spark-count { font-size: calc(38px * var(--ss)); }
+.item-pop {
+  font-family: var(--font-body); font-weight: 700; color: var(--gold);
+  font-size: calc(34px * var(--ss)); background: var(--panel); border: 2px solid var(--gold);
+  padding: calc(6px * var(--ss)) calc(14px * var(--ss));
+}
+.item-pop.pop { animation: itemPop 1s ease-out; }
+@keyframes itemPop { 0% { transform: scale(0.5); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+
+
 /* ============ PART 1B: GM primary / approaches / tools ============ */
 .gm .director-card { border: 3px solid var(--gold); background: var(--panel); padding: 12px 14px; margin: 12px 0; }
 .gm .primary-step-wrap { margin: 10px 0; }

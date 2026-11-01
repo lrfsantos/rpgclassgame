@@ -132,16 +132,32 @@ function renderStory(v, s) {
   const top = el("div", { class: "story-top" });
   top.appendChild(el("span", { class: "story-title" }, v.title || v.goal || "Story"));
   top.appendChild(el("span", { class: "story-path" }, `Scene ${v.sceneIndex + 1}/${v.sceneCount}`));
+  // persistent Spark meter + items strip (F3)
+  const spark = el("span", { class: "spark-count", "data-spark": String(v.spark) }, `Spark ${v.spark}`);
+  top.appendChild(spark);
+  if (v.items && v.items.length) {
+    const strip = el("span", { class: "story-items story-items-top" });
+    strip.appendChild(el("span", { class: "story-items-label" }, "Found:"));
+    v.items.forEach((it) => strip.appendChild(el("span", { class: "story-item" }, it.label || it.id)));
+    top.appendChild(strip);
+  }
   wrap.appendChild(top);
 
   const scene = el("div", { class: "story-scene" });
-  const actor = s.players.find((p) => p.id === (v.actor ? v.actor.id : null));
-  if (actor) {
-    const slot = el("div", { class: "story-hero" });
-    mountSprite(slot, actor.classId || "warrior", "idle-1", intSpriteScale(5));
-    slot.appendChild(el("div", { class: "pname-tag" }, actor.name));
-    scene.appendChild(slot);
+  // party row: EVERY hero, active hero enlarged (F3). Never one sprite only.
+  const party = el("div", { class: "story-party" });
+  for (const p of v.party) {
+    const slot = el("div", { class: "story-hero" + (p.active ? " active" : "") });
+    mountSprite(slot, p.classId || "warrior", p.hp === 0 ? "down" : "idle-1", intSpriteScale(p.active ? 5 : 3));
+    slot.appendChild(el("div", { class: "pname-tag" }, p.name));
+    party.appendChild(slot);
   }
+  scene.appendChild(party);
+  if (v.actor) {
+    const banner = el("div", { class: "turn-banner" }, `${v.actor.name}'s turn`);
+    scene.insertBefore(banner, party);
+  }
+
   // approach cards (CHOOSE step: display-only)
   if (v.step === "choose" && v.cards.length) {
     const cards = el("div", { class: "approach-cards" });
@@ -151,20 +167,46 @@ function renderStory(v, s) {
         el("div", { class: "approach-label" }, c.label),
         el("div", { class: "approach-stat" }, classNameStat(c.stat)),
       );
+      if (c.kind) card.appendChild(el("div", { class: "approach-kind" }, c.kind));
+      if (c.stars) card.appendChild(el("div", { class: "approach-stars" }, "★".repeat(c.stars)));
       if (c.starter) card.appendChild(el("div", { class: "approach-starter" }, c.starter));
+      card.appendChild(el("div", { class: "approach-bonus" }, `Your bonus +${c.bonusForActor}`));
       cards.appendChild(card);
     });
     scene.appendChild(cards);
   }
-  // ROLL: big d20 + Spark count
-  if (v.step === "roll" && v.roll) {
+  // ROLL: big "d20 ?" (the number has not been rolled yet)
+  if (v.step === "roll") {
     const roll = el("div", { class: "story-roll" });
-    const face = el("div", { class: "d20-face d20-big" + (v.roll.crit ? " d20-crit" : ""), style: `font-size:${px(64)}` }, String(v.roll.d20));
+    const face = el("div", { class: "d20-face d20-big d20-unknown" }, "?");
     if (!REDUCED) { face.classList.add("d20-rolling"); setTimeout(() => face.classList.remove("d20-rolling"), 700); }
     roll.appendChild(face);
-    const spark = el("div", { class: "spark-count" }, `Spark ${v.spark}`);
-    roll.appendChild(spark);
     scene.appendChild(roll);
+  }
+  // RESULT: real d20 face + breakdown + outcome + bridge (F3)
+  if (v.step === "result" && v.roll) {
+    const r = v.roll;
+    const res = r.crit ? "CRIT!" : r.fumble ? "FUMBLE!" : r.success ? "success" : "fail";
+    const resultBox = el("div", { class: "story-result" });
+    const face = el("div", { class: "d20-face d20-big" + (r.crit ? " d20-crit" : ""), style: `font-size:${px(64)}` }, String(r.d20));
+    if (!REDUCED) { face.classList.add("d20-rolling"); setTimeout(() => face.classList.remove("d20-rolling"), 700); }
+    resultBox.appendChild(face);
+    const line = el("div", { class: "roll-line" },
+      el("span", { class: "big" }, `d20 ${r.d20}`),
+      el("span", {}, ` + mod ${r.mod}`),
+      el("span", {}, r.langBonus ? ` + language ${r.langBonus}` : ""),
+      el("span", {}, r.assistBonus ? ` + story ${r.assistBonus}` : ""),
+      el("span", {}, ` = ${r.total} vs ${r.difficulty}`),
+      el("span", { class: r.crit ? "roll-crit" : r.success ? "roll-success" : "roll-fail" }, ` → ${res}`),
+    );
+    resultBox.appendChild(line);
+    const total = el("div", { class: "spark-count" }, `Spark ${v.spark}`);
+    resultBox.appendChild(total);
+    if (v.outcome && v.outcome.item) {
+      const pop = el("div", { class: "item-pop" + (REDUCED ? "" : " pop") }, `Found: ${v.outcome.item.label || v.outcome.item.id}`);
+      resultBox.appendChild(pop);
+    }
+    scene.appendChild(resultBox);
   }
   wrap.appendChild(scene);
 
@@ -174,13 +216,6 @@ function renderStory(v, s) {
     dlg.appendChild(typewriterText(v.read, { speed: 18 }));
     dlg.setAttribute("data-narration", v.read);
     wrap.appendChild(dlg);
-  }
-  // items gathered so far (M6): visible proof the class earned them
-  if (v.items && v.items.length) {
-    const strip = el("div", { class: "story-items" });
-    strip.appendChild(el("span", { class: "story-items-label" }, "Found:"));
-    v.items.forEach((it) => strip.appendChild(el("span", { class: "story-item" }, it.label || it.id)));
-    wrap.appendChild(strip);
   }
   return wrap;
 }
