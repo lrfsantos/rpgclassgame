@@ -16,6 +16,7 @@ export function buildEpisodeExpedition(episode) {
         name: sc.flavour,
         flavour: sc.flavour,
         level: sc.level || 1,
+        bridge: sc.bridge || "",
         event: {
           type: "combat",
           monsterTemplate: m,
@@ -32,6 +33,7 @@ export function buildEpisodeExpedition(episode) {
       name: sc.flavour,
       flavour: sc.flavour,
       level: 1,
+      bridge: sc.bridge || "",
       event: {
         type: "story",
         choices: sc.choices || [],

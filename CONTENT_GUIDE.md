@@ -41,6 +41,7 @@ Each scene needs:
   "difficulty": 10,                      // story scenes only: d20 target
   "monsterId": "cracked-golem",          // combat scenes only: an id from monsters.json
   "flavour": "Narration shown on Stage.",
+  "bridge": "Short line shown at RESULT, <= 22 words.", // optional: every scene EXCEPT the last; links to the next scene
   "prompt": {
     "text": "What the class must say aloud.",
     "target": "Teacher hint: grammar/form to look for.",
@@ -78,6 +79,9 @@ Rules:
   earlier scene may have set — use it to make the story react to what the class
   said (e.g. "The Bell of Bellingham": the clapper scene is easier if the class
   earned the Toll-keeper's Rope at the bridge).
+- `bridge` (<= 22 words) appears on the Stage at the scene's RESULT and leads
+  into the next scene (e.g. "The Elder points to her map. The tower is across
+  the river, over the Toll Bridge."). Every scene except the last needs one.
 - Keep vocabulary A2–B2, keep prompts short, keep tone warm and safe. Every
   scene's `prompt` needs all three of text/target/example.
 

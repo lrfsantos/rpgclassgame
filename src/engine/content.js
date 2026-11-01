@@ -203,7 +203,9 @@ function validateEpisodes(data) {
         );
       }
       errs.push(
-        ...fail(sc.conditional === undefined || (typeof sc.conditional.flag === "string" && sc.conditional.whenSet && sc.conditional.whenUnset), `episode ${ep.id}: scene ${sc.id} conditional needs {flag, whenSet, whenUnset}`)
+        ...fail(sc.conditional === undefined || (typeof sc.conditional.flag === "string" && sc.conditional.whenSet && sc.conditional.whenUnset), `episode ${ep.id}: scene ${sc.id} conditional needs {flag, whenSet, whenUnset}`),
+        ...fail(j >= ep.scenes.length - 1 || (typeof sc.bridge === "string" && sc.bridge.trim().length > 0), `episode ${ep.id}: scene ${sc.id} needs a bridge string (every scene except the last)`),
+        ...fail(j >= ep.scenes.length - 1 || sc.bridge === undefined || sc.bridge.split(/\s+/).length <= 22, `episode ${ep.id}: scene ${sc.id} bridge must be <= 22 words (got ${sc.bridge ? sc.bridge.split(/\s+/).length : 0})`)
       );
     });
   });

@@ -105,6 +105,12 @@ async function playOnce(c, grade) {
   let partyRowOk = 0;
   let partyRowFail = 0;
   let turnBannerSeen = 0;
+  // F5 bridge beats: scenes 1-5 must show their bridge on Stage at RESULT
+  const bridgeByScene = {};
+  for (const sc of scenes) if (sc.bridge) bridgeByScene[sc.id] = sc.bridge;
+  let bridgeOk = 0;
+  let bridgeMismatch = 0;
+  let bridgeCheckedScenes = new Set();
 
   while (steps++ < safety) {
     if (await evalJs(c.send, `/STORY COMPLETE!|STORY OVER/.test(document.body.textContent)`)) { recapReached = true; break; }
@@ -192,6 +198,35 @@ async function playOnce(c, grade) {
       }
       if (shown !== null && String(exp.lastRoll.d20) === shown) resultD20Ok++;
       else { resultD20Mismatch++; console.error("  F3 RESULT d20: expected", exp.lastRoll.d20, "shown", JSON.stringify(shown)); }
+      // F5: while the stage is at RESULT, the scene bridge must be in its text
+      const scId = exp.rooms && exp.rooms[cur] ? exp.rooms[cur].id : null;
+      const expectBridge = scId ? bridgeByScene[scId] : null;
+      if (expectBridge && !bridgeCheckedScenes.has(scId)) {
+        bridgeCheckedScenes.add(scId);
+        // read the full data-narration attribute (the typewriter prints a
+        // partial visible text, so textContent alone would miss the bridge)
+        const full = await evalJs(c.send, `(()=>{const e=document.querySelector('#stage .story-dialogue[data-narration]'); return e?e.getAttribute('data-narration'):'';})()`);
+        if (full.includes(expectBridge.slice(0, 25))) bridgeOk++;
+        else { bridgeMismatch++; console.error("  F5 bridge: expected", JSON.stringify(expectBridge.slice(0, 30)), "in dlg", JSON.stringify(full.slice(0, 80))); }
+      }
+    }
+    // F5: at RESULT, the bridge for this scene must appear in the Stage text
+    // (story scenes show it in the dialogue; the combat scene in the room-result)
+    if (stepNow === "RESULT" && exp && exp.rooms && exp.rooms[cur]) {
+      const scId = exp.rooms[cur].id;
+      const expectBridge = bridgeByScene[scId];
+      if (expectBridge && !bridgeCheckedScenes.has(scId)) {
+        bridgeCheckedScenes.add(scId);
+        // wait for the STAGE to actually render its RESULT step (it lags the GM)
+        let ready = false;
+        for (let k = 0; k < 10 && !ready; k++) {
+          ready = await evalJs(c.send, `(()=>{const s=document.querySelector('#stage .step-bar .step.current'); return s && s.textContent.trim()==='RESULT';})()`);
+          if (!ready) await wait(120);
+        }
+        const txt = await evalJs(c.send, `document.querySelector('#stage') ? document.querySelector('#stage').textContent.replace(/\\s+/g,' ') : ''`);
+        if (txt.includes(expectBridge.slice(0, 25))) bridgeOk++;
+        else { bridgeMismatch++; console.error("  F5 bridge: expected", JSON.stringify(expectBridge.slice(0, 30)), "in stage", JSON.stringify(txt.slice(0, 80))); }
+      }
     }
     if (isStoryStep) {
       const partyN = await evalJs(c.send, `(()=>document.querySelectorAll('#stage .story .story-party .story-hero').length)()`);
@@ -199,6 +234,22 @@ async function playOnce(c, grade) {
       if (partyOk) partyRowOk++; else { partyRowFail++; console.error("  F3 party row: not ok at", stepNow, "slots", partyN); }
       const banner = await evalJs(c.send, `(()=>{const b=document.querySelector('#stage .story .turn-banner'); return b?b.textContent.trim():null;})()`);
       if (banner) turnBannerSeen++;
+    }
+
+    // F5: combat scene RESULT shows its bridge in the .room-result beat
+    if (stepNow === "RESULT" && !isStoryStep && exp && exp.rooms && exp.rooms[cur]) {
+      const scId = exp.rooms[cur].id;
+      const expectBridge = bridgeByScene[scId];
+      if (expectBridge && !bridgeCheckedScenes.has(scId)) {
+        bridgeCheckedScenes.add(scId);
+        let txt = "";
+        for (let k = 0; k < 6 && !txt; k++) {
+          txt = await evalJs(c.send, `(()=>{const e=document.querySelector('#stage .room-result'); return e?e.textContent.replace(/\\s+/g,' '):'';})()`);
+          if (!txt) await wait(120);
+        }
+        if (txt.includes(expectBridge.slice(0, 25))) bridgeOk++;
+        else { bridgeMismatch++; console.error("  F5 combat bridge: expected", JSON.stringify(expectBridge.slice(0, 30)), "in result", JSON.stringify(txt.slice(0, 80))); }
+      }
     }
 
     // primary step button enabled?
@@ -250,7 +301,7 @@ async function playOnce(c, grade) {
     await wait(200);
   }
 
-  return { stageHints, storyItemsSeen, recapReached, noPrimary, badDisabled, spriteFails, outcomeMismatch, listenOracles, resultOracles, minFont, minContrast, steps, stuck, didTypeCheck, skipOK, skipFail, autoCompleteOK, autoCompleteFail, rollUnknownSeen, resultD20Ok, resultD20Mismatch, partyRowOk, partyRowFail, turnBannerSeen };
+  return { stageHints, storyItemsSeen, recapReached, noPrimary, badDisabled, spriteFails, outcomeMismatch, listenOracles, resultOracles, minFont, minContrast, steps, stuck, didTypeCheck, skipOK, skipFail, autoCompleteOK, autoCompleteFail, rollUnknownSeen, resultD20Ok, resultD20Mismatch, partyRowOk, partyRowFail, turnBannerSeen, bridgeOk, bridgeMismatch, bridgeCheckedScenes: bridgeCheckedScenes.size };
 }
 
 try {
@@ -281,6 +332,7 @@ try {
   assert(great.resultD20Ok > 0 && great.resultD20Mismatch === 0, `great run: RESULT step shows the real d20 face = lastRoll.d20 (ok ${great.resultD20Ok}, mismatch ${great.resultD20Mismatch})`);
   assert(great.partyRowOk > 0 && great.partyRowFail === 0, `great run: party row (all heroes) present + non-transparent + in-view at every story step (ok ${great.partyRowOk}, fail ${great.partyRowFail})`);
   assert(great.turnBannerSeen > 0, `great run: '<Name>'s turn' banner shown on Stage (saw ${great.turnBannerSeen})`);
+  assert(great.bridgeCheckedScenes >= 5 && great.bridgeMismatch === 0, `great run: scene bridges appear on Stage at RESULT (checked ${great.bridgeCheckedScenes}, ok ${great.bridgeOk}, mismatch ${great.bridgeMismatch})`);
   const saveG = await evalJs(c.send, `localStorage.getItem('classroom-rpg-save-v1')`);
   const parsedG = saveG ? JSON.parse(saveG) : null;
   assert(!!parsedG && parsedG.expedition && parsedG.expedition.outcome && parsedG.expedition.outcome.text && parsedG.expedition.outcome.text.length > 0, "great run: expedition.outcome.text set at recap");

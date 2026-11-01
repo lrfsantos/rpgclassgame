@@ -287,6 +287,9 @@ function renderCombat(v, s) {
     res.appendChild(el("div", { class: "room-result-title" }, title));
     if (!isCombatDown && rr.won && rr.text) res.appendChild(el("div", { class: "room-result-line" }, rr.text));
     if (!rr.won) res.appendChild(el("div", { class: "room-result-line" }, rr.text || "The party is overwhelmed..."));
+    // episode combat scenes show their outcome + bridge on top of the victory line
+    if (rr.outcomeText) res.appendChild(el("div", { class: "room-result-line" }, rr.outcomeText));
+    if (rr.outcomeBridge) res.appendChild(el("div", { class: "room-result-bridge" }, rr.outcomeBridge));
     res.appendChild(el("div", { class: "room-result-line" }, `Spark ${rr.score} · Gold ${rr.gold}`));
     if (rr.isLast) res.appendChild(el("div", { class: "room-result-next" }, "The expedition is complete!"));
     else if (rr.nextRoom) res.appendChild(el("div", { class: "room-result-next" }, `Next: ${rr.nextRoom}`));

@@ -124,7 +124,7 @@ export function getView(state) {
 
   const read = isStory
     ? (step === "result" && exp.outcome ? (exp.outcome.text || "") + (exp.outcome.bridge ? " " + exp.outcome.bridge : "") : (ev.read || room.flavour || ""))
-    : (ev.scenePrompt && ev.scenePrompt.text ? ev.scenePrompt.text : (room && room.flavour) || "");
+    : (step === "result" && exp && exp.outcome ? (exp.outcome.text || "") + (exp.outcome.bridge ? " " + exp.outcome.bridge : "") : (ev.scenePrompt && ev.scenePrompt.text ? ev.scenePrompt.text : (room && room.flavour) || ""));
 
   let ask = "";
   if (step === "sayit" && exp.langPrompt && exp.langPrompt.text) ask = exp.langPrompt.text;
@@ -195,6 +195,8 @@ export function getView(state) {
       isLast,
       score: state.party ? state.party.score : 0,
       gold: state.party ? state.party.gold : 0,
+      outcomeText: exp.outcome ? exp.outcome.text : "",
+      outcomeBridge: exp.outcome ? exp.outcome.bridge : "",
     };
   }
 

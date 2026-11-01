@@ -10,6 +10,7 @@
         {
           "id": "the-quiet-village",
           "kind": "story",
+          "bridge": "The Elder points to her map. The tower is across the river, over the Toll Bridge.",
           "flavour": "The village of Bellingham is too quiet. The Elder shows you the silent bell in the square. 'Wake our bell,' she says. 'The Moss King stole the clapper.'",
           "choices": [
             {
@@ -63,6 +64,7 @@
         {
           "id": "the-toll-bridge",
           "kind": "story",
+          "bridge": "Across the bridge, the path enters the Dark Forest. The trees whisper.",
           "flavour": "A river blocks the way. A grumpy toll-keeper sits by a rope bridge, and he will not move for free.",
           "choices": [
             {
@@ -107,6 +109,7 @@
         {
           "id": "the-dark-forest",
           "kind": "story",
+          "bridge": "Past the forest, the Tower of Echoes rises from the mud. Something big blocks the door.",
           "flavour": "Inside the forest, a wise owl sits on a branch and will only let you pass if you answer well.",
           "choices": [
             {
@@ -114,11 +117,11 @@
               "label": "Answer the riddle",
               "stat": "mind",
               "difficulty": 12,
-              "text": "Answer the owl's riddle: 'What grows louder the more you take from it?'",
+              "text": "Answer the owl's riddle: 'What gets bigger the more you take away from it?'",
               "target": "A complete answer with 'the more... the more'.",
               "example": "The more you take from a hole, the bigger the hole gets.",
               "onGood": "The owl hoots happily and points to a hidden path.",
-              "onBad": "The owl shakes its head. 'That is a hole, not an answer.'",
+              "onBad": "The owl tilts its head. 'Close! Think about holes.'",
               "flag": "owlHelp",
               "grants": { "flag": "owlHelp", "label": "Owl's Feather" }
             },
@@ -150,6 +153,7 @@
           "id": "the-tower",
           "kind": "combat",
           "level": 2,
+          "bridge": "The golem falls into dust. The stairs are open. You climb, and climb, and climb.",
           "monsterId": "cracked-golem",
           "flavour": "At last, the Tower of Echoes. The Moss King's guard — a golem of cracked stone — blocks the stairs. Only a strong heart and strong words can move it.",
           "prompt": {
@@ -158,7 +162,7 @@
             "example": "The bell must ring because the village has been silent for a hundred years."
           },
           "onGood": "The golem rumbles, confused, and gives you an opening.",
-          "onBad": "The golem shows no mercy. It attacks!",
+          "onBad": "The golem gives no ground. It attacks!",
           "talkDown": {
             "label": "Talk it down",
             "stat": "heart",
@@ -173,12 +177,13 @@
         {
           "id": "the-clapper",
           "kind": "story",
+          "bridge": "Clapper in hand, you run back to Bellingham. The whole village waits in the square.",
           "flavour": "High in the tower, the clapper hangs on a chain above a bottomless drop. One brave voice must guide the climber.",
           "conditional": {
             "flag": "crossedBridge",
             "whenSet": {
               "difficultyBonus": -2,
-              "flavour": "The toll-keeper's rope is still tied to the tower wall. With it, the climb is easier."
+              "flavour": "The toll-keeper gave you a strong rope at the bridge. It makes the climb easier."
             },
             "whenUnset": {
               "difficultyBonus": 0,
@@ -207,7 +212,7 @@
               "target": "An encouraging sentence with 'you can'.",
               "example": "You can do this, we are right behind you!",
               "onGood": "Your words carry the climber up. The clapper is caught!",
-              "onBad": "The climber hesitates, then jumps anyway. Barely caught."
+              "onBad": "The climber pauses, then jumps anyway. Barely caught."
             },
             {
               "id": "describe-the-plan",

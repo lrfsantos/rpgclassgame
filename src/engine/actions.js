@@ -983,8 +983,12 @@ function fireCombatSceneOutcome(s, won) {
   if (won && scene.onGood) {
     log(s, scene.onGood, "challenge");
     if (scene.flags) Object.assign(exp.flags || (exp.flags = {}), scene.flags);
+    // F5: expose the combat outcome (text + bridge) so the Stage can show a
+    // RESULT beat with the scene's bridge at the room's end.
+    exp.outcome = { success: true, crit: false, fumble: false, text: scene.onGood, item: null, bridge: room.bridge || "" };
   } else if (!won && scene.onBad) {
     log(s, scene.onBad, "challenge");
+    exp.outcome = { success: false, crit: false, fumble: false, text: scene.onBad, item: null, bridge: room.bridge || "" };
   }
 }
 
