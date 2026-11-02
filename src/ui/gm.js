@@ -2,7 +2,7 @@
 // Authoritative. Step bar + ONE primary button per step (Space triggers),
 // keys 1-4 pick approach, keys 1/2/3 grade. Tools collapsed. Disabled controls
 // always show a reason. Read-only no spoilers on the Stage only.
-import { getState, subscribe } from "../engine/state.js";
+import { getState, subscribe, getSessionId } from "../engine/state.js";
 import { getContent } from "../engine/content.js";
 import * as actions from "../engine/actions.js";
 import { getView, currentStep } from "../engine/view.js";
@@ -279,9 +279,11 @@ function renderTop(s) {
   return wrap;
 }
 
-// (F2d) Stage sync indicator. The Stage writes an ack to
+// (F2d/S1) Stage sync indicator. The Stage writes an ack to
 // "classroom-rpg-stage-ack" (never the save key) on every ingest; we compare
-// its rev against ours and show in-sync / behind / not-detected.
+// its rev against ours and show in-sync / behind / not-detected. The session
+// must be compared against the PUBLISHED session (getSessionId), because a
+// fresh in-memory state has session === null until publishable() runs.
 const ACK_KEY = "classroom-rpg-stage-ack";
 function syncPill(s) {
   const pill = el("span", { class: "sync-pill", id: "gm-sync-pill" }, "Stage: ...");
@@ -291,15 +293,17 @@ function syncPill(s) {
     const raw = localStorage.getItem(ACK_KEY);
     if (raw) {
       const p = JSON.parse(raw);
-      if (p && p.session === (s && s.session) && typeof p.rev === "number") ack = p;
+      if (p && p.session === getSessionId() && typeof p.rev === "number") ack = p;
     }
   } catch (e) { /* ignore */ }
   let label = "Stage: not detected";
   let cls = "sync-none";
   if (ack) {
-    const behind = ours - ack.rev;
-    if (behind <= 0) { label = `Stage: in sync (rev ${ours})`; cls = "sync-ok"; }
-    else { label = `Stage: behind (${behind})`; cls = "sync-behind"; }
+    // any mismatch (stage ahead OR behind) is "behind" — the Stage is not at the
+    // GM's current rev, so the teacher should know it has stale content.
+    const diff = ours - ack.rev;
+    if (diff === 0) { label = `Stage: in sync (rev ${ours})`; cls = "sync-ok"; }
+    else { label = `Stage: behind (${Math.abs(diff)})`; cls = "sync-behind"; }
   }
   pill.textContent = label;
   pill.className = "sync-pill " + cls;

@@ -46,18 +46,24 @@ function bootStage() {
       got = true;
       lastSource = "BC";
       applyIfNewer(msg.state);
-      ack(msg.state);
+      ack();
     }
   });
   const stopWatch = state.watchStorage((s) => {
     if (s === null) { /* save cleared */ return; }
     lastSource = "storage";
     applyIfNewer(s);
-    ack(s);
+    ack();
   });
 
-  // (F2c) poll fallback: read the save key and apply if newer, covering dropped
-  // storage/broadcast events. Writes the ack each time it sees a new revision.
+  // (F2c/S2) poll fallback: read the save key every 500 ms and apply if newer,
+  // covering dropped storage/broadcast events. Also self-heals: if the save key
+  // carries the SAME session but a LOWER rev than the Stage for 3 consecutive
+  // polls, the GM's save is authoritative, so force an ingest (the Stage was
+  // ahead, e.g. after the GM forced its rev up, and would otherwise ignore the
+  // older GM state forever). The ack is written after every apply so the GM's
+  // "behind" count reflects the rev the Stage actually holds.
+  let stalePolls = 0;
   const poll = () => {
     try {
       const raw = localStorage.getItem("classroom-rpg-save-v1");
@@ -65,8 +71,19 @@ function bootStage() {
       const s = JSON.parse(raw);
       if (!s || s.schema !== 2) return;
       lastSource = "poll";
-      applyIfNewer(s);
-      ack(s);
+      const applied = applyIfNewer(s, true);
+      if (applied) { stalePolls = 0; ack(); }
+      else if (s.session && state.getState().session === s.session && s.rev < state.getState().rev) {
+        if (++stalePolls >= 3) {
+          stalePolls = 0;
+          lastSource = "self-heal";
+          state.ingest(s);
+          ack();
+        }
+      } else {
+        stalePolls = 0;
+        ack();
+      }
     } catch (e) { /* ignore */ }
   };
   setInterval(poll, 500);
@@ -80,7 +97,7 @@ function bootStage() {
     if (msg.type === "state" && msg.state) {
       lastSource = "opener";
       applyIfNewer(msg.state);
-      ack(msg.state);
+      ack();
     }
   });
   if (window.opener && window.opener !== window) {
@@ -88,7 +105,7 @@ function bootStage() {
       try {
         if (window.opener && window.opener.__rpgPublishable) {
           const s = window.opener.__rpgPublishable();
-          if (s) { lastSource = "opener-poll"; applyIfNewer(s); ack(s); }
+          if (s) { lastSource = "opener-poll"; applyIfNewer(s); ack(); }
         }
       } catch (e) { /* cross-origin or gone */ }
     };
@@ -96,15 +113,21 @@ function bootStage() {
     setInterval(pull, 300);
   }
 
-  // (F2d) Stage writes its ack to a dedicated key (never the save key) so the GM
-  // can show the "Stage: in sync / behind / not detected" indicator.
+  // (F2d/S1) Stage writes its ack to a dedicated key (never the save key) so the
+  // GM can show the "Stage: in sync / behind / not detected" indicator. The rev
+  // written is the one the Stage ACTUALLY APPLIED (state.getState().rev), not
+  // the incoming rev, so the GM's "behind" count is correct.
   const ACK_KEY = "classroom-rpg-stage-ack";
-  function ack(s) {
-    if (!s || s.rev === undefined) return;
+  function ack() {
+    const cur = state.getState();
+    if (!cur || cur.rev === undefined) return;
     try {
       lastUpdateAt = Date.now();
-      localStorage.setItem(ACK_KEY, JSON.stringify({ session: s.session, rev: s.rev, t: Date.now() }));
+      localStorage.setItem(ACK_KEY, JSON.stringify({ session: cur.session || getPublishableSession(), rev: cur.rev, t: Date.now() }));
     } catch (e) { /* ignore */ }
+  }
+  function getPublishableSession() {
+    try { return state.publishable().session; } catch (e) { return null; }
   }
   window.__rpgStageAck = ack;
 
@@ -140,17 +163,19 @@ function bootStage() {
 
 function applyIfNewer(s) {
   const cur = state.getState();
-  if (!cur || cur.rev === undefined || s.rev === undefined) return;
+  if (!cur || cur.rev === undefined || s.rev === undefined) return false;
   // different session = the GM restarted fresh (storage cleared); accept it and
   // drop the old rev baseline so the Stage stops ignoring a lower-rev state (D15)
   if (cur.session && s.session && cur.session !== s.session) {
     if (s && s.schema === 2) state.ingest(s);
-    return;
+    return true;
   }
   if (s.rev >= cur.rev) {
     // Keep schema guard: stage only ingests states it understands.
     if (s && s.schema === 2) state.ingest(s);
+    return true;
   }
+  return false;
 }
 
 function bootGm() {
