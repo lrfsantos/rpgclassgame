@@ -260,7 +260,7 @@ body, button, input, select, textarea, .window, .muted, .log-entry { font-family
 .battle-enemies .enemy-slot canvas, .battle-field canvas { image-rendering: pixelated; }
 .battle-party { position: absolute; bottom: 24%; left: 3%; display: flex; gap: calc(16px * var(--ss)); align-items: flex-end; }
 .battle-party .party-slot { display: flex; flex-direction: column; align-items: center; gap: 2px; position: relative; }
-.battle-party .party-slot .pname-tag { font-family: var(--font-body); font-size: calc(26px * var(--ss)); color: var(--bone); background: #0008; padding: 2px 6px; white-space: nowrap; }
+.battle-party .party-slot .pname-tag { font-family: var(--font-body); font-size: calc(28px * var(--ss)); color: var(--bone); background: #0008; padding: 2px 6px; white-space: nowrap; }
 .bar { height: calc(20px * var(--ss)); }
 .bar-label { font-size: calc(20px * var(--ss)); line-height: calc(16px * var(--ss)); }
 
