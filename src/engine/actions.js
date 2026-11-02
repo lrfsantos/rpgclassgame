@@ -362,6 +362,7 @@ function doStoryRoll(s, forceD20) {
         const dmg = new Dice(newSeed()).roll(6);
         const actor = playerById(s, r.playerId);
         actor.hp = Math.max(0, actor.hp - dmg);
+        if (exp.outcome) { exp.outcome.trapDmg = dmg; exp.outcome.trapActor = actor.name; }
         log(s, pickNarration(s, "trapFail", { player: actor.name }), "trap");
         log(s, `${actor.name} takes ${dmg} damage from the trap.`, "trap");
       }

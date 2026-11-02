@@ -279,16 +279,15 @@ function renderCombat(v, s) {
     }
     menu.appendChild(labels);
   } else if (v.roomStatus === "cleared" || v.roomStatus === "defeat") {
-    // F4: RESULT beat for every room kind — a clear "this room is over" signal.
+    // F4/S3: RESULT beat for every room kind — a clear "this room is over"
+    // signal. The title is the headline sentence; the body only prints detail
+    // that DIFFERS from the title (never the same sentence twice).
     const rr = v.roomResult || { won: v.roomStatus === "cleared", text: "", monsterName: "", nextRoom: null, isLast: false, score: v.spark, gold: 0 };
     const isCombatDown = v.monster && v.monster.hp === 0 && rr.monsterName;
     const title = isCombatDown ? `Victory! ${rr.monsterName} is defeated.` : (rr.won ? rr.text || "Room cleared." : "Defeat");
     const res = el("div", { class: "room-result" + (rr.won ? "" : " room-result-fail") });
     res.appendChild(el("div", { class: "room-result-title" }, title));
-    if (!isCombatDown && rr.won && rr.text) res.appendChild(el("div", { class: "room-result-line" }, rr.text));
-    if (!rr.won) res.appendChild(el("div", { class: "room-result-line" }, rr.text || "The party is overwhelmed..."));
-    // episode combat scenes show their outcome + bridge on top of the victory line
-    if (rr.outcomeText) res.appendChild(el("div", { class: "room-result-line" }, rr.outcomeText));
+    if (rr.outcomeText && rr.outcomeText !== title) res.appendChild(el("div", { class: "room-result-line" }, rr.outcomeText));
     if (rr.outcomeBridge) res.appendChild(el("div", { class: "room-result-bridge" }, rr.outcomeBridge));
     res.appendChild(el("div", { class: "room-result-line" }, `Spark ${rr.score} · Gold ${rr.gold}`));
     if (rr.isLast) res.appendChild(el("div", { class: "room-result-next" }, "The expedition is complete!"));

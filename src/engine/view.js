@@ -161,8 +161,10 @@ export function getView(state) {
     fumble: exp.lastRoll.fumble,
   } : null;
 
-  // F4: a RESULT beat for every room kind once a room is cleared or defeated.
-  // Gives the class a clear "it is over" signal + the next room's name.
+  // F4/S3: a RESULT beat for every room kind once a room is cleared or defeated.
+  // Gives the class a clear "it is over" signal + the next room's name. For
+  // challenge/trap rooms the d20 outcome (exp.outcome.success) decides the text,
+  // because roomStatus is always "cleared" there even on a failed roll.
   let roomResult = null;
   if (exp && (exp.roomStatus === "cleared" || exp.roomStatus === "defeat")) {
     const kind = room ? room.kind : "";
@@ -170,6 +172,9 @@ export function getView(state) {
     const monsterName = (exp.monster && exp.monster.name) || (room && room.event && room.event.monsterName) || "";
     const nextRoom = exp.rooms && exp.rooms[sceneIndex + 1] ? (exp.rooms[sceneIndex + 1].name || null) : null;
     const isLast = sceneIndex >= sceneCount - 1;
+    const outcomeSuccess = !!(exp.outcome && exp.outcome.success);
+    const outcomeText = exp.outcome ? exp.outcome.text : "";
+    const outcomeBridge = exp.outcome ? exp.outcome.bridge : "";
     let text = "";
     if (kind === "combat") {
       text = won ? `Victory! ${monsterName} is defeated.` : "The party is overwhelmed...";
@@ -180,9 +185,10 @@ export function getView(state) {
     } else if (kind === "event") {
       text = won ? `A strange event unfolds: ${room.flavour || ""}` : "";
     } else if (kind === "challenge") {
-      text = won ? "The challenge is conquered. The path opens." : "The challenge defeats the party's best efforts...";
+      text = outcomeSuccess ? "The challenge is conquered. The path opens." : "The challenge slips away.";
     } else if (kind === "trap") {
-      text = won ? "The trap is disarmed. The party slips past." : "The trap springs! The party is caught...";
+      text = outcomeSuccess ? "The trap is disarmed. The party slips past."
+        : `The trap springs! ${exp.outcome && exp.outcome.trapActor ? exp.outcome.trapActor + " takes " + exp.outcome.trapDmg + " damage." : "The party is caught..."}`;
     } else {
       text = won ? "The room is cleared." : "The party is overwhelmed...";
     }
@@ -195,8 +201,8 @@ export function getView(state) {
       isLast,
       score: state.party ? state.party.score : 0,
       gold: state.party ? state.party.gold : 0,
-      outcomeText: exp.outcome ? exp.outcome.text : "",
-      outcomeBridge: exp.outcome ? exp.outcome.bridge : "",
+      outcomeText,
+      outcomeBridge,
     };
   }
 
