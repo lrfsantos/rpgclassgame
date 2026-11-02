@@ -205,6 +205,64 @@ for (const { sceneId, item } of M6_ITEMS) {
   assert(got === item, `M6: "${item}" granted on a successful roll (scene ${sceneId})`);
 }
 
+// S5: all three scene-2 choices grant the Toll-keeper's Rope under keeperHelped
+{
+  const sc2 = EPISODE.episodes[0].scenes.find((x) => x.id === "the-toll-bridge");
+  assert(!!sc2 && Array.isArray(sc2.choices) && sc2.choices.length === 3, "S5: scene 2 has 3 choices");
+  const allGrant = (sc2.choices || []).every((c) => c.grants && c.grants.flag === "keeperHelped" && c.grants.label === "Toll-keeper's Rope");
+  assert(allGrant, "S5: every scene-2 choice grants keeperHelped + Toll-keeper's Rope");
+}
+
+// S5: conditional branches for Elder's Map (scene 3) and Owl's Feather (scene 6)
+function driveToSceneListen(sceneId, maxLoops = 80) {
+  let n = 0;
+  while (n++ < maxLoops) {
+    s = stateMod.getState();
+    const exp = s.expedition;
+    if (!exp || exp.mode !== "episode") return false;
+    const room = exp.rooms[exp.current] || {};
+    if (room.id === sceneId && exp.roomStatus === "story" && exp.step === "listen") return true;
+    if (exp.roomStatus === "cleared" || exp.roomStatus === "defeat") { actions.advanceRoom(); }
+    else if (exp.roomStatus === "story") {
+      if (exp.step === "listen") { actions.storyContinue(); }
+      else if (exp.step === "choose") { const c = (getView(s).cards || [])[0]; if (c) actions.chooseStoryApproach(c.id); else actions.reshuffleOptions(); }
+      else if (exp.step === "sayit") { actions.gradeStory(4); }
+      else if (exp.step === "roll") { actions.rollStory(20); }
+      else { actions.storyContinue(); }
+    }
+    else { actions.advanceRoom(); }
+  }
+  return false;
+}
+const sc3 = EPISODE.episodes[0].scenes.find((x) => x.id === "the-dark-forest");
+const sc6 = EPISODE.episodes[0].scenes.find((x) => x.id === "the-bell-rings");
+// WITH Elder's Map: riddle easier (-2) + map flavour
+freshEpisode();
+s = stateMod.getState();
+s.expedition.flags = s.expedition.flags || {}; s.expedition.flags.elderTrusted = true;
+assert(driveToSceneListen("the-dark-forest"), "S5: reached scene 3 LISTEN (elderTrusted set)");
+s = stateMod.getState();
+assert(s.expedition.storyDiffBonus === -2, "S5: Elder's Map lowers the riddle by 2 (storyDiffBonus " + s.expedition.storyDiffBonus + ")");
+assert((getView(s).read || "").includes("The Elder's map shows the owl's tree"), "S5: scene 3 LISTEN shows the map flavour");
+// WITHOUT the map: original flavour, no bonus
+freshEpisode();
+assert(driveToSceneListen("the-dark-forest"), "S5: reached scene 3 LISTEN (no map)");
+s = stateMod.getState();
+assert((s.expedition.storyDiffBonus || 0) === 0, "S5: no map -> no riddle bonus (got " + s.expedition.storyDiffBonus + ")");
+assert(!(getView(s).read || "").includes("The Elder's map shows the owl's tree"), "S5: no map -> original scene 3 flavour");
+// WITH Owl's Feather: scene 6 first line
+freshEpisode();
+s = stateMod.getState();
+s.expedition.flags = s.expedition.flags || {}; s.expedition.flags.owlHelp = true;
+assert(driveToSceneListen("the-bell-rings"), "S5: reached scene 6 LISTEN (owlHelp set)");
+s = stateMod.getState();
+assert((getView(s).read || "").startsWith("The owl's feather glows in your pocket."), "S5: scene 6 LISTEN starts with the feather line (with owlHelp)");
+// WITHOUT: original scene 6 flavour
+freshEpisode();
+assert(driveToSceneListen("the-bell-rings"), "S5: reached scene 6 LISTEN (no owlHelp)");
+s = stateMod.getState();
+assert(!(getView(s).read || "").includes("The owl's feather glows in your pocket."), "S5: no owlHelp -> original scene 6 flavour");
+
 // assist cap +2: two different assisters cap the bonus, a third is ignored
 freshEpisode();
 v = toRollStep();

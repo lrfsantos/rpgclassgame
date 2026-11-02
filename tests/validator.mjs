@@ -63,5 +63,21 @@ await loadExpectError("skills.json", "bad skill effect fails");
 writeFileSync(`${FIX}/classes.json`, "{}"); // ensure classes.json no longer breaks other cases
 writeFileSync(`${FIX}/skills.json`, "{}");
 
+// 5. A granted flag that no scene's conditional reads is warned about (not fatal).
+rmSync(`${FIX}/classes.json`, { force: true });
+rmSync(`${FIX}/skills.json`, { force: true });
+const ep = JSON.parse(readFileSync(`${REAL}/episodes.json`, "utf8"));
+const unread = JSON.parse(JSON.stringify(ep));
+unread.episodes[0].scenes[0].choices[0].grants.flag = "neverReadFlag";
+unread.episodes[0].scenes[0].choices[0].flag = "neverReadFlag";
+writeFileSync(`${FIX}/episodes.json`, JSON.stringify(unread));
+let warned = null;
+const origWarn = console.warn;
+console.warn = (m) => { if (!warned && /neverReadFlag/.test(m)) warned = m; };
+try { await freshLoad(); } catch (e) { console.error("  (freshLoad threw: " + e.message.split("\n")[0] + ")"); }
+console.warn = origWarn;
+assert(!!warned, `unread granted flag warns (got ${warned ? "a warning" : "no warning"})`);
+rmSync(`${FIX}/episodes.json`, { force: true });
+
 console.log(failures ? `\n${failures} FAILURES` : "\nALL VALIDATOR TESTS PASSED");
 process.exitCode = failures ? 1 : 0;

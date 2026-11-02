@@ -77,8 +77,8 @@
               "example": "Could we please cross the bridge, kind keeper?",
               "onGood": "The keeper shrugs and lowers the rope. 'Fine. Go on, then.'",
               "onBad": "The keeper shakes his head. 'No sweet words, no crossing.'",
-              "flag": "crossedBridge",
-              "grants": { "flag": "crossedBridge", "label": "Toll-keeper's Rope" }
+              "flag": "keeperHelped",
+              "grants": { "flag": "keeperHelped", "label": "Toll-keeper's Rope" }
             },
             {
               "id": "make-a-deal",
@@ -90,8 +90,8 @@
               "example": "If you let us cross, we will bring you a bell's tune.",
               "onGood": "The keeper's eyes light up. 'A tune? Deal!'",
               "onBad": "The keeper taps his coins. 'Not good enough.'",
-              "flag": "crossedBridge",
-              "grants": { "flag": "crossedBridge", "label": "Toll-keeper's Rope" }
+              "flag": "keeperHelped",
+              "grants": { "flag": "keeperHelped", "label": "Toll-keeper's Rope" }
             },
             {
               "id": "tell-a-joke",
@@ -102,7 +102,9 @@
               "target": "A funny sentence with a comparison.",
               "example": "My hero is as clumsy as a goat in a rainstorm!",
               "onGood": "The keeper laughs so hard he drops the rope. 'Go on! Go!'",
-              "onBad": "The keeper just stares. 'I have heard funnier bells.'"
+              "onBad": "The keeper just stares. 'I have heard funnier bells.'",
+              "flag": "keeperHelped",
+              "grants": { "flag": "keeperHelped", "label": "Toll-keeper's Rope" }
             }
           ]
         },
@@ -111,6 +113,16 @@
           "kind": "story",
           "bridge": "Past the forest, the Tower of Echoes rises from the mud. Something big blocks the door.",
           "flavour": "Inside the forest, a wise owl sits on a branch and will only let you pass if you answer well.",
+          "conditional": {
+            "flag": "elderTrusted",
+            "whenSet": {
+              "difficultyBonus": -2,
+              "flavour": "The Elder's map shows the owl's tree. You know what to say."
+            },
+            "whenUnset": {
+              "difficultyBonus": 0
+            }
+          },
           "choices": [
             {
               "id": "answer-the-riddle",
@@ -180,7 +192,7 @@
           "bridge": "Clapper in hand, you run back to Bellingham. The whole village waits in the square.",
           "flavour": "High in the tower, the clapper hangs on a chain above a bottomless drop. One brave voice must guide the climber.",
           "conditional": {
-            "flag": "crossedBridge",
+            "flag": "keeperHelped",
             "whenSet": {
               "difficultyBonus": -2,
               "flavour": "The toll-keeper gave you a strong rope at the bridge. It makes the climb easier."
@@ -231,6 +243,15 @@
           "id": "the-bell-rings",
           "kind": "story",
           "flavour": "Back in the square, the party fits the clapper into the bell. The whole village watches in silence, waiting for one voice.",
+          "conditional": {
+            "flag": "owlHelp",
+            "whenSet": {
+              "flavour": "The owl's feather glows in your pocket. Back in the square, the party fits the clapper into the bell. The whole village watches in silence, waiting for one voice."
+            },
+            "whenUnset": {
+              "flavour": "Back in the square, the party fits the clapper into the bell. The whole village watches in silence, waiting for one voice."
+            }
+          },
           "choices": [
             {
               "id": "wish-out-loud",

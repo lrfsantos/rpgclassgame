@@ -208,6 +208,22 @@ function validateEpisodes(data) {
         ...fail(j >= ep.scenes.length - 1 || sc.bridge === undefined || sc.bridge.split(/\s+/).length <= 22, `episode ${ep.id}: scene ${sc.id} bridge must be <= 22 words (got ${sc.bridge ? sc.bridge.split(/\s+/).length : 0})`)
       );
     });
+    // S5: warn when a granted flag is never read by any scene's conditional
+    // (a reward the story never reacts to is dead content).
+    const granted = new Set();
+    const read = new Set();
+    ep.scenes.forEach((sc) => {
+      if (sc.conditional && sc.conditional.flag) read.add(sc.conditional.flag);
+      if (Array.isArray(sc.choices)) {
+        sc.choices.forEach((c) => {
+          if (c && c.flag) granted.add(c.flag);
+          if (c && c.grants && c.grants.flag) granted.add(c.grants.flag);
+        });
+      }
+    });
+    for (const g of granted) {
+      if (!read.has(g)) console.warn(`content/episodes.json: episode ${ep.id} grants flag "${g}" but no scene's conditional reads it`);
+    }
   });
   return errs;
 }
