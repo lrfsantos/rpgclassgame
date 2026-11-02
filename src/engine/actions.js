@@ -4,6 +4,7 @@ import { getContent } from "./content.js";
 import { generateExpedition } from "./expedition.js";
 import { buildEpisodeExpedition } from "./episode.js";
 import { Dice, newSeed } from "./rng.js";
+import { nextStoryActor } from "./view.js";
 
 const BASE_DIFFICULTY = 10;
 
@@ -259,10 +260,10 @@ export function storyContinue() {
     const exp = s.expedition;
     if (!exp) return s;
     if (exp.step === "listen" && exp.roomStatus === "story") {
-      // choose a rotating actor for this scene
-      const alive = aliveHumans(s);
-      if (alive.length === 0) return s;
-      exp.storyActor = alive[exp.challengeIndex % alive.length].id;
+      // choose a rotating actor for this scene (S4: shared with the Stage banner)
+      const pick = nextStoryActor(s);
+      if (!pick) return s;
+      exp.storyActor = pick.id;
       exp.step = "choose";
       log(s, `${playerById(s, exp.storyActor).name} picks the approach.`, "system");
     } else if (exp.step === "roll" && exp.roomStatus === "story") {

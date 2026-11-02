@@ -31,6 +31,18 @@ function aliveHumans(state) {
   return state.players.filter((p) => !p.npc && p.hp > 0);
 }
 
+// S4: the ONE shared source of truth for which hero acts in a story scene.
+// storyContinue picks alive[challengeIndex % alive.length] when it moves a
+// scene from LISTEN to CHOOSE; the Stage shows the same name in its banner
+// while the class is still listening.
+export function nextStoryActor(state) {
+  const exp = state.expedition;
+  if (!exp) return null;
+  const alive = aliveHumans(state);
+  if (alive.length === 0) return null;
+  return alive[(exp.challengeIndex || 0) % alive.length];
+}
+
 function playerById(state, id) {
   return state.players.find((p) => p.id === id);
 }
@@ -132,7 +144,10 @@ export function getView(state) {
 
   let actor = null;
   if (exp) {
-    const aId = exp.storyActor || exp.activePlayerId;
+    // S4: at LISTEN the rotating actor has not been chosen yet (storyActor is
+    // null); show the SAME name the GM will pick, so the Stage banner reads
+    // "<Name>'s turn" while the class is still listening.
+    const aId = (exp.storyActor || exp.activePlayerId) || (isStory && step === "listen" && nextStoryActor(state) ? nextStoryActor(state).id : null);
     if (aId) {
       const p = playerById(state, aId);
       if (p) actor = { id: p.id, name: p.name, classId: p.classId, npc: !!p.npc, hp: p.hp, maxHp: p.maxHp };

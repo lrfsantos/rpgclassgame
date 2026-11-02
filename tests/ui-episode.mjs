@@ -111,6 +111,12 @@ async function playOnce(c, grade) {
   let bridgeOk = 0;
   let bridgeMismatch = 0;
   let bridgeCheckedScenes = new Set();
+  // S4 listen-banner: the banner at LISTEN shows the same hero storyContinue
+  // will pick (exp.storyActor) after Continue
+  let listenBannerSeen = 0;
+  let listenBannerOk = 0;
+  let listenBannerMismatch = 0;
+  let pendingListenName = null;
 
   while (steps++ < safety) {
     if (await evalJs(c.send, `/STORY COMPLETE!|STORY OVER/.test(document.body.textContent)`)) { recapReached = true; break; }
@@ -252,6 +258,17 @@ async function playOnce(c, grade) {
       }
     }
 
+    // S4: the LISTEN banner must name the hero storyContinue will pick.
+    if (stepNow === "LISTEN" && isStoryStep) {
+      const bn = await evalJs(c.send, `(()=>{const b=document.querySelector('#stage .story .turn-banner'); return b?b.textContent.replace(/\\s+/g,' ').trim():null;})()`);
+      if (bn && bn.endsWith("'s turn")) { listenBannerSeen++; pendingListenName = bn.replace(/'s turn$/, "").trim(); }
+    } else if (pendingListenName && stepNow === "CHOOSE" && exp && exp.storyActor) {
+      const actorName = await evalJs(c.send, `(()=>{const p=JSON.parse(localStorage.getItem('classroom-rpg-save-v1')); const a=p.expedition.storyActor; const pl=p.players.find(x=>x.id===a); return pl?pl.name:null;})()`);
+      if (actorName && actorName === pendingListenName) listenBannerOk++;
+      else { listenBannerMismatch++; console.error("  S4 listen banner: expected", JSON.stringify(actorName), "banner showed", JSON.stringify(pendingListenName)); }
+      pendingListenName = null;
+    }
+
     // primary step button enabled?
     const primEnabled = await evalJs(c.send, `!!document.querySelector('.primary-step:not([disabled])')`);
     const primDisabled = await evalJs(c.send, `!!document.querySelector('.primary-step[disabled]')`);
@@ -301,7 +318,7 @@ async function playOnce(c, grade) {
     await wait(200);
   }
 
-  return { stageHints, storyItemsSeen, recapReached, noPrimary, badDisabled, spriteFails, outcomeMismatch, listenOracles, resultOracles, minFont, minContrast, steps, stuck, didTypeCheck, skipOK, skipFail, autoCompleteOK, autoCompleteFail, rollUnknownSeen, resultD20Ok, resultD20Mismatch, partyRowOk, partyRowFail, turnBannerSeen, bridgeOk, bridgeMismatch, bridgeCheckedScenes: bridgeCheckedScenes.size };
+  return { stageHints, storyItemsSeen, recapReached, noPrimary, badDisabled, spriteFails, outcomeMismatch, listenOracles, resultOracles, minFont, minContrast, steps, stuck, didTypeCheck, skipOK, skipFail, autoCompleteOK, autoCompleteFail, rollUnknownSeen, resultD20Ok, resultD20Mismatch, partyRowOk, partyRowFail, turnBannerSeen, bridgeOk, bridgeMismatch, bridgeCheckedScenes: bridgeCheckedScenes.size, listenBannerSeen, listenBannerOk, listenBannerMismatch };
 }
 
 try {
@@ -332,6 +349,7 @@ try {
   assert(great.resultD20Ok > 0 && great.resultD20Mismatch === 0, `great run: RESULT step shows the real d20 face = lastRoll.d20 (ok ${great.resultD20Ok}, mismatch ${great.resultD20Mismatch})`);
   assert(great.partyRowOk > 0 && great.partyRowFail === 0, `great run: party row (all heroes) present + non-transparent + in-view at every story step (ok ${great.partyRowOk}, fail ${great.partyRowFail})`);
   assert(great.turnBannerSeen > 0, `great run: '<Name>'s turn' banner shown on Stage (saw ${great.turnBannerSeen})`);
+  assert(great.listenBannerSeen > 0 && great.listenBannerOk > 0 && great.listenBannerMismatch === 0, `great run: LISTEN banner names the same hero storyContinue picks (seen ${great.listenBannerSeen}, ok ${great.listenBannerOk}, mismatch ${great.listenBannerMismatch})`);
   assert(great.bridgeCheckedScenes >= 5 && great.bridgeMismatch === 0, `great run: scene bridges appear on Stage at RESULT (checked ${great.bridgeCheckedScenes}, ok ${great.bridgeOk}, mismatch ${great.bridgeMismatch})`);
   const saveG = await evalJs(c.send, `localStorage.getItem('classroom-rpg-save-v1')`);
   const parsedG = saveG ? JSON.parse(saveG) : null;
