@@ -58,8 +58,16 @@ const SLOT_PROBE = `(()=>{
   const record=(slot, type)=>{
     const cvs=[...slot.querySelectorAll('canvas')];
     // invariant: every slot element must hold EXACTLY one non-empty canvas
-    const good = cvs.length===1 && (()=>{const c=cvs[0]; let nt=0; try{const d=c.getContext('2d').getImageData(0,0,c.width,c.height).data; for(let i=3;i<d.length;i+=4){if(d[i]>0){nt=1;break;}}}catch(e){} const r=c.getBoundingClientRect(); const vp=document.documentElement.clientWidth, vh=document.documentElement.clientHeight; return nt===1 && r.width>0 && r.height>0 && r.left>=0 && r.top>=0 && r.right<=vp && r.bottom<=vh; })();
-    out.push({type, good});
+    let reason = '';
+    if (cvs.length !== 1) reason = 'canvas:' + cvs.length;
+    else {
+      const c = cvs[0]; let nt = 0;
+      try { const d = c.getContext('2d').getImageData(0,0,c.width,c.height).data; for (let i=3;i<d.length;i+=4) { if (d[i]>0) { nt=1; break; } } } catch (e) { reason = 'read:' + e.message; }
+      if (!nt && !reason) reason = 'transparent';
+      const r = c.getBoundingClientRect(); const vp = document.documentElement.clientWidth, vh = document.documentElement.clientHeight;
+      if (!(r.width>0 && r.height>0 && r.left>=0 && r.top>=0 && r.right<=vp && r.bottom<=vh)) reason = (reason ? reason + ',' : '') + 'offscreen:' + Math.round(r.left) + ',' + Math.round(r.top) + ',' + Math.round(r.right) + ',' + Math.round(r.bottom) + '/' + vp + 'x' + vh;
+    }
+    out.push({type, good: !reason, reason, cls: String(slot.className || '')});
   };
   for(const s of document.querySelectorAll('.party-slot,.story-hero')) record(s,'hero');
   for(const s of document.querySelectorAll('.enemy-slot')) record(s,'monster');
@@ -70,7 +78,7 @@ async function probeSlots(page) {
   const slots = JSON.parse((await page.eval(SLOT_PROBE)) || "[]");
   const heroes = slots.filter((c) => c.type === "hero");
   const monsters = slots.filter((c) => c.type === "monster");
-  return { total: slots.length, heroSlots: heroes.length, monsterSlots: monsters.length, heroesOk: heroes.every((c) => c.good), monstersOk: monsters.every((c) => c.good) };
+  return { total: slots.length, heroSlots: heroes.length, monsterSlots: monsters.length, heroesOk: heroes.every((c) => c.good), monstersOk: monsters.every((c) => c.good), bad: heroes.filter((c) => !c.good).map((c) => c.reason + ':' + c.cls) };
 }
 
 async function addPlayers(gm, n, aClass) {
@@ -141,6 +149,7 @@ try {
   const tabA = await newTab(`${BASE}/index.html`);
   const cA = connect(tabA.webSocketDebuggerUrl);
   await cA.ready; await cA.send("Runtime.enable"); await cA.send("Page.enable");
+  await cA.send("Emulation.setDeviceMetricsOverride", { width: 1920, height: 1080, deviceScaleFactor: 1, mobile: false });
   const gm = makeClient(cA.send);
   await gm.eval(`(()=>{const b=document.getElementById('gm-drawer-open'); if(b)b.click(); return true;})()`);
   await waitFor(gm, `!!document.querySelector('[data-action="add-player"]')`);
@@ -176,7 +185,8 @@ try {
   const startedB = await waitFor(gm, `!!document.querySelector('#stage .step-bar')`);
   assert(startedB, "scenario B: expedition started");
   const resB = await driveAndSample(gm, 30);
-  assert(allHeroesAt(resB.samples, 12), `scenario B (expedition, 12 thieves): every hero slot present + non-transparent + in-view at every step; full row of 12 shown at least once`);
+  const dB = resB.samples.filter((s) => s.heroSlots > 0);
+  assert(allHeroesAt(resB.samples, 12), `scenario B (expedition, 12 thieves): every hero slot present + non-transparent + in-view at every step; full row of 12 shown at least once (samples=${resB.samples.length}, withHeroes=${dB.length}, max=${Math.max(0, ...dB.map((s) => s.heroSlots))}, bad=${dB.filter((s) => !s.heroesOk).length}, why=${JSON.stringify(dB.filter((s) => !s.heroesOk).flatMap((s) => s.bad).slice(0, 6))})`);
   assert(cA.exceptions.length === 0, `scenario B: no console exceptions (${cA.exceptions.length})`);
 
   // ---- Scenario C: index.html single-window, expedition, 12 mixed classes ----
@@ -196,7 +206,8 @@ try {
   const startedC = await waitFor(gm, `!!document.querySelector('#stage .step-bar')`);
   assert(startedC, "scenario C: expedition started");
   const resC = await driveAndSample(gm, 30);
-  assert(allHeroesAt(resC.samples, 12), `scenario C (expedition, 12 mixed): every hero slot present + non-transparent + in-view at every step; full row of 12 shown at least once`);
+  const dC = resC.samples.filter((s) => s.heroSlots > 0);
+  assert(allHeroesAt(resC.samples, 12), `scenario C (expedition, 12 mixed): every hero slot present + non-transparent + in-view at every step; full row of 12 shown at least once (samples=${resC.samples.length}, withHeroes=${dC.length}, max=${Math.max(0, ...dC.map((s) => s.heroSlots))}, bad=${dC.filter((s) => !s.heroesOk).length}, why=${JSON.stringify(dC.filter((s) => !s.heroesOk).flatMap((s) => s.bad).slice(0, 6))})`);
   const monsterOk = resC.samples.some((s) => s.monsterSlots > 0 && s.monstersOk);
   assert(monsterOk, "scenario C: monster slot present + non-transparent + in-view during combat");
   assert(cA.exceptions.length === 0, `scenario C: no console exceptions (${cA.exceptions.length})`);
@@ -206,10 +217,12 @@ try {
   const gmTab = await newTab(`${BASE}/gm.html`);
   const cG = connect(gmTab.webSocketDebuggerUrl);
   await cG.ready; await cG.send("Runtime.enable"); await cG.send("Page.enable");
+  await cG.send("Emulation.setDeviceMetricsOverride", { width: 1920, height: 1080, deviceScaleFactor: 1, mobile: false });
   const gmG = makeClient(cG.send);
   const stTab = await newTab(`${BASE}/stage.html`);
   const cS = connect(stTab.webSocketDebuggerUrl);
   await cS.ready; await cS.send("Runtime.enable"); await cS.send("Page.enable");
+  await cS.send("Emulation.setDeviceMetricsOverride", { width: 1920, height: 1080, deviceScaleFactor: 1, mobile: false });
   const stageS = makeClient(cS.send);
   await wait(600);
   await gmG.eval(`localStorage.removeItem('classroom-rpg-save-v1'); true`);
