@@ -13,7 +13,9 @@ export const VERSION = "v2.2.0";
 const page = window.location.pathname.split("/").pop() || "index.html";
 
 async function boot() {
-  audio.initAudio();
+  // only the GM/single-window page owns the music; a separate Stage window must
+  // not start its own loop (two independent soundtracks in two-window mode)
+  if (page !== "stage.html") audio.initAudio();
   try {
     await loadContent();
   } catch (e) {

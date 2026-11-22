@@ -33,7 +33,6 @@ export async function mountStage(container) {
   try {
     await loadSprites();
   } catch (e) { /* sprites optional */ }
-  audio.initAudio();
   measureStage();
   render();
   subscribe(() => render());

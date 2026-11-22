@@ -153,6 +153,21 @@ try {
   await evaluate(send, `document.getElementById('gm-drawer-close').click()`);
   await wait(300);
 
+  // A separate Stage window must NOT own a music loop: instrument AudioContext
+  // before the page loads, then send a gesture and count constructions.
+  const stageTarget = await (await fetch(`${CDP_HTTP}/json/new?${encodeURIComponent("http://localhost:8000/stage.html")}`, { method: "PUT" })).json();
+  const sc = connect(stageTarget.webSocketDebuggerUrl);
+  await sc.ready;
+  await sc.send("Runtime.enable");
+  await sc.send("Page.enable");
+  await sc.send("Page.addScriptToEvaluateOnNewDocument", { source: "window.__ctxCount=0;var AC=window.AudioContext;if(AC){window.AudioContext=class extends AC{constructor(){super();window.__ctxCount++;}};}" });
+  await sc.send("Page.navigate", { url: "http://localhost:8000/stage.html" });
+  await wait(1000);
+  await evaluate(sc.send, `document.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true})); window.dispatchEvent(new KeyboardEvent('keydown',{key:'g',bubbles:true})); true`);
+  await wait(300);
+  const stageCtxCount = await evaluate(sc.send, `window.__ctxCount`);
+  assert(stageCtxCount === 0, `Stage window creates no AudioContext on gesture (got ${stageCtxCount})`);
+
   console.log(failures ? "\nSMOKE TEST FAILED" : "\nSMOKE TEST PASSED");
 } catch (e) {
   console.error("CRASH:", e);
