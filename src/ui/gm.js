@@ -259,24 +259,114 @@ function primaryLabel(s) {
   const step = currentStep(s);
   if (!step) return null;
   const isCombat = s.expedition && s.expedition.roomStatus === "combat";
-  if (step === "listen") return { text: "Continue", reason: null };
-  if (step === "choose") return isCombat ? { text: "Attack (free) — or pick a skill (1-4)", reason: null } : { text: "Pick an approach (1-4)", reason: "Pick an approach" };
-  if (step === "sayit") return isCombat ? { text: "Grade the answer (1=Weak 2=Good 3=Great)", reason: "Choose a grade" } : { text: "Grade the answer (1=Weak 2=Good 3=Great)", reason: "Choose a grade" };
-  if (step === "roll") return { text: "Roll d20", reason: null };
+  // G: hide, never disable. choose/sayit have their own controls; combat roll is
+  // transient (resolveRoll advances immediately) so no primary is needed there.
+  if (step === "listen") return { text: "Continue" };
+  if (step === "roll") return isCombat ? null : { text: "Roll d20" };
   if (step === "result") {
     const isEp = s.expedition && s.expedition.mode === "episode";
-    return isEp ? { text: "Next scene", reason: null } : { text: "Next room", reason: null };
+    return isEp ? { text: "Next scene" } : { text: "Next room" };
   }
   return null;
 }
 
 function renderTop(s) {
-  const wrap = el("div");
+  const wrap = el("div", { class: "gm-top" });
+  wrap.appendChild(el("div", { class: "gm-hint" }, nextHint(s)));
   const bar = stepBar(s);
   if (bar) wrap.appendChild(bar);
-  wrap.appendChild(el("div", { class: "gm-hint" }, nextHint(s)));
-  wrap.appendChild(syncPill(s));
+  const row = el("div", { class: "gm-top-row" });
+  row.appendChild(syncPill(s));
+  row.appendChild(el("button", { "data-action": "open-stage", class: "btn" }, "Open Stage window"));
+  row.appendChild(renderMore(s));
+  wrap.appendChild(row);
   return wrap;
+}
+
+// G: everything except the current step's controls lives in a collapsed "More"
+// menu (hide, never disable). Settings + text size always; tools only in play.
+function renderMore(s) {
+  const more = el("details", { class: "tools" });
+  more.appendChild(el("summary", {}, "More"));
+  const inner = el("div", { class: "more-inner" });
+  inner.appendChild(el("div", { class: "more-label" }, "Settings"));
+  const row1 = el("div", { class: "row" });
+  row1.appendChild(el("span", { class: "label" }, "Language Check"));
+  const lc = el("select", { "data-setting": "languageCheck" });
+  for (const mode of ["off", "light", "full"]) {
+    const opt = el("option", { value: mode }, mode);
+    opt.selected = mode === s.settings.languageCheck;
+    lc.appendChild(opt);
+  }
+  row1.appendChild(lc);
+  row1.appendChild(el("span", { class: "label" }, "Spotlight size"));
+  const sp = el("input", { type: "number", min: "1", max: "12", value: String(s.settings.spotlight), "data-setting": "spotlight", style: "width:64px" });
+  row1.appendChild(sp);
+  row1.appendChild(el("span", { class: "label" }, "NPC companion"));
+  const npc = el("input", { type: "checkbox", "data-setting": "npcCompanion" });
+  npc.checked = !!s.settings.npcCompanion;
+  row1.appendChild(npc);
+  inner.appendChild(row1);
+  const row2 = el("div", { class: "row" });
+  row2.appendChild(el("span", { class: "label" }, "Starters on Stage"));
+  const st = el("input", { type: "checkbox", "data-setting": "startersOnStage" });
+  st.checked = s.settings.startersOnStage !== false;
+  row2.appendChild(st);
+  row2.appendChild(el("span", { class: "label" }, "Tutorial tips"));
+  const tt = el("input", { type: "checkbox", "data-setting": "tutorialTips" });
+  tt.checked = s.settings.tutorialTips !== false;
+  row2.appendChild(tt);
+  inner.appendChild(row2);
+  const ts = el("div", { class: "row" });
+  ts.appendChild(el("span", { class: "label" }, "Text size"));
+  ts.appendChild(el("button", { "data-action": "text-minus", class: "btn" }, "A-"));
+  ts.appendChild(el("button", { "data-action": "text-plus", class: "btn" }, "A+"));
+  inner.appendChild(ts);
+
+  const inPlay = s.phase !== "lobby" && s.phase !== "victory" && s.phase !== "defeated";
+  if (inPlay) {
+    const exp = s.expedition;
+    const view = getView(s);
+    inner.appendChild(el("div", { class: "more-label" }, "Tools"));
+    const trow = el("div", { class: "row" });
+    trow.appendChild(el("button", { "data-action": "undo" }, "Undo"));
+    trow.appendChild(el("button", { "data-action": "reroll", disabled: exp.lastAction ? null : "", title: exp.lastAction ? null : "No action to reroll yet" }, "Reroll last"));
+    trow.appendChild(el("button", { "data-action": "skip-room" }, "Skip room"));
+    inner.appendChild(trow);
+    const narr = el("div", { class: "row" });
+    narr.appendChild(el("input", { id: "gm-narrate", placeholder: "Narrate to Stage..." }));
+    narr.appendChild(el("button", { "data-action": "narrate" }, "Send"));
+    inner.appendChild(narr);
+    const adj = el("div", { class: "party-adjust" });
+    adj.appendChild(el("div", { class: "label" }, "Adjust party"));
+    for (const p of s.players) {
+      const rw = el("div", { class: "pa-row" });
+      rw.appendChild(el("span", { style: "width:110px" }, p.name));
+      rw.appendChild(el("button", { "data-action": "hp-minus", "data-value": p.id }, "-HP"));
+      rw.appendChild(el("span", { class: "muted" }, `HP ${p.hp}/${p.maxHp}`));
+      rw.appendChild(el("button", { "data-action": "hp-plus", "data-value": p.id }, "+HP"));
+      rw.appendChild(el("button", { "data-action": "focus-minus", "data-value": p.id }, "-F"));
+      rw.appendChild(el("span", { class: "muted" }, `F ${p.focus}/${p.maxFocus}`));
+      rw.appendChild(el("button", { "data-action": "focus-plus", "data-value": p.id }, "+F"));
+      adj.appendChild(rw);
+    }
+    const scoreRow = el("div", { class: "pa-row" });
+    scoreRow.appendChild(el("span", { style: "width:110px" }, "Spark"));
+    scoreRow.appendChild(el("button", { "data-action": "score-minus" }, "-1"));
+    scoreRow.appendChild(el("span", { class: "muted" }, `Spark ${s.party.score}`));
+    scoreRow.appendChild(el("button", { "data-action": "score-plus" }, "+1"));
+    adj.appendChild(scoreRow);
+    inner.appendChild(adj);
+    const nav = el("div", { class: "row" });
+    nav.appendChild(el("button", { "data-action": "retreat", class: "danger" }, "End story (retreat)"));
+    nav.appendChild(el("button", { "data-action": "back-to-lobby" }, "Back to lobby"));
+    inner.appendChild(nav);
+  } else {
+    inner.appendChild(el("button", { "data-action": "back-to-lobby" }, "Back to lobby"));
+  }
+  inner.appendChild(el("button", { "data-action": "delete-save", class: "danger" }, "Delete save"));
+  more.appendChild(inner);
+  return more;
 }
 
 // (F2d/S1) Stage sync indicator. The Stage writes an ack to
@@ -356,13 +446,6 @@ function renderLobby(s) {
 
   const ready = s.players.length > 0 && s.players.every((p) => p.classId);
 
-  // two-screen: open the Stage window
-  const two = el("div", { class: "window" });
-  two.appendChild(el("h3", {}, "Two screens"));
-  two.appendChild(el("button", { "data-action": "open-stage", class: "primary" }, "Open Stage window"));
-  two.appendChild(el("p", { class: "muted" }, "Drag it to the projector, press F11."));
-  body.appendChild(two);
-
   // episodes (scripted stories)
   const eps = getContent().episodes;
   if (eps && eps.length > 0) {
@@ -382,43 +465,6 @@ function renderLobby(s) {
     disabled: ready ? null : "",
   }, `Start Expedition (${s.players.length} players)`));
   if (!ready && s.players.length > 0) body.appendChild(el("p", { class: "muted" }, "All players need a class."));
-
-  // settings
-  const settings = el("div", { class: "window" });
-  settings.appendChild(el("h3", {}, "Settings"));
-  const row1 = el("div", { class: "row" });
-  row1.appendChild(el("span", { class: "label" }, "Language Check"));
-  const lc = el("select", { "data-setting": "languageCheck" });
-  for (const mode of ["off", "light", "full"]) {
-    const opt = el("option", { value: mode }, mode);
-    opt.selected = mode === s.settings.languageCheck;
-    lc.appendChild(opt);
-  }
-  row1.appendChild(lc);
-  row1.appendChild(el("span", { class: "label" }, "Spotlight size"));
-  const sp = el("input", { type: "number", min: "1", max: "12", value: String(s.settings.spotlight), "data-setting": "spotlight", style: "width:64px" });
-  row1.appendChild(sp);
-  row1.appendChild(el("span", { class: "label" }, "NPC companion"));
-  const npc = el("input", { type: "checkbox", "data-setting": "npcCompanion" });
-  npc.checked = !!s.settings.npcCompanion;
-  row1.appendChild(npc);
-  settings.appendChild(row1);
-  const row2 = el("div", { class: "row" });
-  row2.appendChild(el("span", { class: "label" }, "Sentence starters on Stage"));
-  const st = el("input", { type: "checkbox", "data-setting": "startersOnStage" });
-  st.checked = s.settings.startersOnStage !== false;
-  row2.appendChild(st);
-  settings.appendChild(row2);
-  body.appendChild(settings);
-
-  // text size
-  const ts = el("div", { class: "row" });
-  ts.appendChild(el("span", { class: "label" }, "Text size"));
-  ts.appendChild(el("button", { "data-action": "text-minus", class: "btn" }, "A-"));
-  ts.appendChild(el("button", { "data-action": "text-plus", class: "btn" }, "A+"));
-  body.appendChild(ts);
-
-  body.appendChild(el("button", { "data-action": "delete-save", class: "danger" }, "Delete save"));
   return body;
 }
 
@@ -431,43 +477,41 @@ function renderPlay(s) {
     const won = s.phase === "victory";
     body.appendChild(el("h2", {}, won ? "Story Complete!" : "Story Over"));
     body.appendChild(el("p", { class: "muted" }, `Spark: ${s.party.score}`));
-    body.appendChild(el("button", { "data-action": "back-to-lobby", class: "primary" }, "Back to lobby"));
     return body;
   }
 
-  const room = exp.rooms[exp.current];
   const actor = s.players.find((p) => p.id === exp.activePlayerId);
   const step = currentStep(s);
 
-  // current state panel
+  // current state panel + READ ALOUD box (28px read text; tip hidden when tips off)
   const panel = el("div", { class: "window state-panel" });
   panel.appendChild(el("div", {}, `Scene ${exp.current + 1}/${exp.rooms.length} — ${view.title || exp.deckName}`));
-  if (view.read) panel.appendChild(el("p", { class: "read-aloud" }, view.read));
   if (view.monster) {
     panel.appendChild(el("div", {}, `Enemy: ${view.monster.name}`));
     panel.appendChild(bar(view.monster.hp, view.monster.maxHp, "hp"));
   }
+  if (view.read) {
+    const ra = el("div", { class: "read-aloud" });
+    ra.appendChild(el("span", { class: "read-aloud-text" }, view.read));
+    if (s.settings.tutorialTips !== false) ra.appendChild(el("div", { class: "read-tip" }, "Read it aloud to the class."));
+    panel.appendChild(ra);
+  }
   body.appendChild(panel);
 
-  // Director Card: one primary button + ONLY the current step's controls (M5).
+  // Director Card: the current step's controls ONLY. Hide, never disable.
   const card = el("div", { class: "director-card" });
   const prim = primaryLabel(s);
   if (prim) {
     const p = el("div", { class: "primary-step-wrap" });
-    const isCombat = exp.roomStatus === "combat";
-    const act = step === "choose" && isCombat ? "primary-attack" : step === "sayit" ? "noop" : "story-continue";
-    const btn = el("button", { "data-action": act, class: "primary primary-step", disabled: prim.reason ? "" : null }, prim.text);
-    if (prim.reason) btn.title = prim.reason;
-    p.appendChild(btn);
-    if (prim.reason) p.appendChild(el("span", { class: "muted disabled-reason" }, prim.reason));
+    p.appendChild(el("button", { "data-action": "story-continue", class: "primary primary-step" }, prim.text));
     card.appendChild(p);
   }
 
-  // CHOOSE: approach cards (story, from the view) or skills (combat)
+  // CHOOSE: approach cards (story) or skills (combat)
   if (step === "choose") {
     if (exp.storyChoices && view.cards.length) {
       const choose = el("div", { class: "window" });
-      choose.appendChild(el("h3", {}, "Choose an approach (keys 1-4)"));
+      choose.appendChild(el("h3", {}, "Choose an approach"));
       const actorC = s.players.find((p) => p.id === exp.storyActor);
       if (actorC) choose.appendChild(el("p", { class: "muted" }, `Approach as ${actorC.name} (${className(actorC.classId)}):`));
       view.cards.forEach((c, i) => {
@@ -479,25 +523,27 @@ function renderPlay(s) {
           class: "approach-btn",
         }, `${c.key}. ${c.label} — ${classNameStat(c.stat)} (${c.stars})`));
       });
+      choose.appendChild(el("button", { "data-action": "reshuffle-options", class: "primary" }, "Reshuffle options"));
       card.appendChild(choose);
-    } else if (exp.roomStatus === "combat") {
+    } else if (["combat", "challenge", "trap"].includes(exp.roomStatus)) {
       const actorC = s.players.find((p) => p.id === exp.activePlayerId);
       if (actorC && !actorC.npc) {
         const choose = el("div", { class: "window" });
         choose.appendChild(el("h3", {}, `${actorC.name} — choose a skill (keys 1-4)`));
         const cls = getContent().classes.find((c) => c.id === actorC.classId);
         const skills = [null, ...cls.skillIds];
-        skills.forEach((sid, i) => {
+        let n = 0;
+        skills.forEach((sid) => {
           const sk = sid ? getContent().skills.find((x) => x.id === sid) : null;
           const afford = !sk || actorC.focus >= sk.cost;
+          if (!afford) return; // hide, never disable
+          n += 1;
           choose.appendChild(el("button", {
             "data-action": "use-skill",
             "data-value": JSON.stringify({ playerId: actorC.id, skillId: sid }),
-            "data-skill-num": String(i + 1),
+            "data-skill-num": String(n),
             class: "approach-btn",
-            disabled: afford ? null : "",
-            title: afford ? null : "Not enough Focus",
-          }, `${i + 1}. ${sk ? sk.name : "Basic attack"} ${sk ? `(${sk.cost} F) — ${sk.flavour}` : "(free)"}`));
+          }, `${n}. ${sk ? sk.name : "Basic attack"} ${sk ? `(${sk.cost} F) — ${sk.flavour}` : "(free)"}`));
         });
         if (view.talkDown) {
           choose.appendChild(el("button", {
@@ -510,15 +556,17 @@ function renderPlay(s) {
     }
   }
 
-  // SAY IT: prompt + grade buttons (keys 1/2/3) — combat uses judge-lang, story uses grade-story
+  // SAY IT: prompt + grade buttons (keys 1/2/3) — hints are teacher-only, hidden when tips off
   if (step === "sayit" && view.ask) {
     const isCombat = exp.roomStatus === "combat";
     const act = isCombat ? "judge-lang" : "grade-story";
     const say = el("div", { class: "window" });
     say.appendChild(el("h3", {}, "Say it"));
     say.appendChild(el("p", {}, `Say it: ${view.ask}`));
-    if (view.hints.target) say.appendChild(el("p", { class: "muted" }, `Teacher hint — target: ${view.hints.target}`));
-    if (view.hints.example) say.appendChild(el("p", { class: "muted" }, `Teacher hint — example: ${view.hints.example}`));
+    if (s.settings.tutorialTips !== false) {
+      if (view.hints.target) say.appendChild(el("p", { class: "muted" }, `Teacher hint — target: ${view.hints.target}`));
+      if (view.hints.example) say.appendChild(el("p", { class: "muted" }, `Teacher hint — example: ${view.hints.example}`));
+    }
     const row = el("div", { class: "row" });
     row.appendChild(el("button", { "data-action": act, "data-value": "0" }, "1 · Weak (+0)"));
     row.appendChild(el("button", { "data-action": act, "data-value": "2", class: "success" }, "2 · Good (+2)"));
@@ -534,73 +582,27 @@ function renderPlay(s) {
     card.appendChild(el("div", { class: "window" }, `d20=${r.d20} + mod ${r.mod} + lang ${r.langBonus} + story ${r.assistBonus} = ${r.total} vs ${r.difficulty} → ${res}`));
   }
 
-  // RESULT: (narration is in the log; primary advances)
+  // RESULT: (narration is on the Stage; primary advances)
   if (step === "result") {
-    card.appendChild(el("div", { class: "window" }, "Outcome shown on the Stage. Press Next scene to continue."));
+    card.appendChild(el("div", { class: "window" }, "Outcome shown on the Stage. Press Next to continue."));
   }
 
   body.appendChild(card);
 
-  // assists (during sayit/acting, other players can add to the story) — episode
-  // story sayit/roll too (D5)
+  // assists (during sayit/acting, other players can add to the story) — hide used, never disable
   const assistStep = (exp.actionPhase === "acting" && exp.pending && exp.pending.playerId) || (exp.mode === "episode" && exp.roomStatus === "story" && (step === "sayit" || step === "roll") && exp.pending && exp.pending.playerId);
   if (assistStep) {
-    const others = s.players.filter((p) => p.id !== exp.pending.playerId && !p.npc);
+    const others = s.players.filter((p) => p.id !== exp.pending.playerId && !p.npc && !exp.assistUsed.includes(p.id) && exp.assistBonus < 2);
     if (others.length) {
       const ass = el("div", { class: "window" });
       ass.appendChild(el("h3", {}, "Add to the story (+1 each, max +2)"));
       const row = el("div", { class: "assist-row" });
-      for (const p of others) {
-        const used = exp.assistUsed.includes(p.id);
-        row.appendChild(el("button", { "data-action": "grant-assist", "data-value": p.id, disabled: used ? "" : null }, `${p.name} ${used ? "(helped)" : "+1"}`));
-      }
+      for (const p of others) row.appendChild(el("button", { "data-action": "grant-assist", "data-value": p.id }, `${p.name} +1`));
       ass.appendChild(row);
       body.appendChild(ass);
     }
   }
 
-  // Tools (collapsed)
-  const tools = el("details", { class: "tools" });
-  tools.appendChild(el("summary", {}, "Tools"));
-  const trow = el("div", { class: "row" });
-  trow.appendChild(el("button", { "data-action": "reroll", disabled: exp.lastAction ? null : "", title: exp.lastAction ? null : "No action to reroll yet" }, "Reroll last"));
-  trow.appendChild(el("button", { "data-action": "undo" }, "Undo"));
-  trow.appendChild(el("button", { "data-action": "reshuffle-options", class: "primary", disabled: view.cards.length ? null : "", title: view.cards.length ? null : "Only when choices are shown" }, "Reshuffle options"));
-  trow.appendChild(el("button", { "data-action": "skip-room" }, "Skip room"));
-  const advDisabled = !["cleared", "defeat"].includes(exp.roomStatus);
-  trow.appendChild(el("button", { "data-action": "advance-room", class: "primary", disabled: advDisabled ? "" : null, title: advDisabled ? "Finish the current step first" : null }, "Next room"));
-  tools.appendChild(trow);
-
-  const narr = el("div", { class: "row" });
-  narr.appendChild(el("input", { id: "gm-narrate", placeholder: "Narrate to Stage..." }));
-  narr.appendChild(el("button", { "data-action": "narrate" }, "Send"));
-  tools.appendChild(narr);
-
-  const adj = el("div", { class: "party-adjust" });
-  adj.appendChild(el("div", { class: "label" }, "Adjust party"));
-  for (const p of s.players) {
-    const rw = el("div", { class: "pa-row" });
-    rw.appendChild(el("span", { style: "width:110px" }, p.name));
-    rw.appendChild(el("button", { "data-action": "hp-minus", "data-value": p.id }, "-HP"));
-    rw.appendChild(el("span", { class: "muted" }, `HP ${p.hp}/${p.maxHp}`));
-    rw.appendChild(el("button", { "data-action": "hp-plus", "data-value": p.id }, "+HP"));
-    rw.appendChild(el("button", { "data-action": "focus-minus", "data-value": p.id }, "-F"));
-    rw.appendChild(el("span", { class: "muted" }, `F ${p.focus}/${p.maxFocus}`));
-    rw.appendChild(el("button", { "data-action": "focus-plus", "data-value": p.id }, "+F"));
-    adj.appendChild(rw);
-  }
-  const scoreRow = el("div", { class: "pa-row" });
-  scoreRow.appendChild(el("span", { style: "width:110px" }, "Spark"));
-  scoreRow.appendChild(el("button", { "data-action": "score-minus" }, "-1"));
-  scoreRow.appendChild(el("span", { class: "muted" }, `Spark ${s.party.score}`));
-  scoreRow.appendChild(el("button", { "data-action": "score-plus" }, "+1"));
-  adj.appendChild(scoreRow);
-  tools.appendChild(adj);
-  body.appendChild(tools);
-
-  body.appendChild(el("button", { "data-action": "retreat", class: "danger" }, "End story (retreat)"));
-  body.appendChild(el("button", { "data-action": "back-to-lobby" }, "Back to lobby"));
-  body.appendChild(el("button", { "data-action": "delete-save", class: "danger" }, "Delete save"));
   return body;
 }
 

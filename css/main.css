@@ -443,3 +443,13 @@ body, button, input, select, textarea, .window, .muted, .log-entry { font-family
 .gm .muted, .gm .label, .gm p, .gm .player-row, .gm .pa-row, .gm button:not(.primary-step):not(.approach-btn) { font-size: 20px; }
 .gm input, .gm select, .gm textarea { font-size: 18px; }
 .gm .bar-label { font-size: 14px; line-height: 12px; }
+.gm-top-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 8px 0; }
+.gm-top .tools { margin: 0; }
+.gm-top .tools summary { font-size: 18px; cursor: pointer; color: var(--gold); }
+.gm .more-inner { margin-top: 8px; border-top: 2px solid var(--panel-line); padding-top: 8px; }
+.gm .tools:not([open]) > .more-inner { display: none; }
+.gm .more-label { font-weight: 700; color: var(--gold); margin: 8px 0 2px; }
+.gm .read-aloud { border: 2px solid var(--panel-line); background: var(--panel); padding: 8px 10px; margin: 8px 0; }
+.gm .read-aloud-text { font-size: 28px; line-height: 1.3; color: var(--bone); }
+.gm .read-tip { margin-top: 6px; font-size: 18px; color: var(--bone-dim); }
+.gm .read-aloud:empty { display: none; }

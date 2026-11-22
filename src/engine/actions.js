@@ -154,6 +154,8 @@ export function setSettings(patch) {
     if (patch.languageCheck !== undefined) s.settings.languageCheck = patch.languageCheck;
     if (patch.spotlight !== undefined) s.settings.spotlight = Math.max(1, Math.min(12, patch.spotlight));
     if (patch.npcCompanion !== undefined) s.settings.npcCompanion = !!patch.npcCompanion;
+    if (patch.startersOnStage !== undefined) s.settings.startersOnStage = !!patch.startersOnStage;
+    if (patch.tutorialTips !== undefined) s.settings.tutorialTips = !!patch.tutorialTips;
     return s;
   });
 }

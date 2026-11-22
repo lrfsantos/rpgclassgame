@@ -143,7 +143,7 @@ export function newGameState() {
     players: [],
     expedition: null,
     party: { score: 0, gold: 0 },
-    settings: { languageCheck: "full", spotlight: 4, npcCompanion: false, startersOnStage: true },
+    settings: { languageCheck: "full", spotlight: 4, npcCompanion: false, startersOnStage: true, tutorialTips: true },
     history: [],
   };
 }

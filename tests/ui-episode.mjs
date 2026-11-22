@@ -1,6 +1,6 @@
 // Episode test (PART 1B + M3a): first-time-user playthrough of the story using ONLY
 // the primary button (Space) and number keys (1-4 approach, 1/2/3 grade). Never
-// uses skip-room. Asserts: every step has an enabled primary; no disabled control
+// uses skip-room. Asserts: every step has an enabled main-view control; no disabled control
 // lacks reason text; independent outcome oracle (at LISTEN the Stage dialogue
 // contains the scene text from content/episodes.json; at RESULT it contains the
 // choice's onGood/onBad according to lastRoll.success read from the saved state);
@@ -269,10 +269,13 @@ async function playOnce(c, grade) {
       pendingListenName = null;
     }
 
-    // primary step button enabled?
+    // G: hide, never disable. CHOOSE/SAY IT have no primary by design — their
+    // enabled control is an approach card or a grade button. Every step must
+    // have SOME enabled main-view control.
     const primEnabled = await evalJs(c.send, `!!document.querySelector('.primary-step:not([disabled])')`);
     const primDisabled = await evalJs(c.send, `!!document.querySelector('.primary-step[disabled]')`);
-    if (!primEnabled && !primDisabled) noPrimary++;
+    const stepControl = await evalJs(c.send, `!!document.querySelector('.gm [data-action="choose-approach"]:not([disabled]), .gm [data-action="grade-story"]:not([disabled]), .gm [data-action="use-skill"]:not([disabled]), .gm [data-action="judge-lang"]:not([disabled])')`);
+    if (!primEnabled && !stepControl) noPrimary++;
     // disabled controls show a reason (title or sibling .disabled-reason)
     const badD = await evalJs(c.send, `(()=>{const out=[]; for(const b of document.querySelectorAll('.gm button[disabled]')){ if(!b.title && !(b.nextElementSibling && b.nextElementSibling.classList.contains('disabled-reason'))) out.push(b.dataset.action||b.textContent.trim().slice(0,20)); } return out.length?out.join(','):null;})()`);
     if (badD) badDisabled.push(badD);
@@ -335,7 +338,7 @@ try {
   const great = await playOnce(c, "great");
   assert(great.recapReached, "great run: story reached the recap screen");
   assert(great.stageHints.length === 0, `great run: no target/example hint leaked on Stage (${JSON.stringify(great.stageHints.slice(0,3))})`);
-  assert(great.noPrimary === 0, `great run: every step had an enabled primary control (missing ${great.noPrimary} times)`);
+  assert(great.noPrimary === 0, `great run: every step had an enabled main-view control (missing ${great.noPrimary} times)`);
   assert(great.badDisabled.length === 0, `great run: no disabled control lacks a reason (${JSON.stringify(great.badDisabled.slice(0,3))})`);
   assert(great.spriteFails === 0, `great run: sprite matrix clean (${great.spriteFails} fails)`);
   assert(great.outcomeMismatch === 0, `great run: independent oracle matched (LISTEN ${great.listenOracles} / RESULT ${great.resultOracles}, ${great.outcomeMismatch} mismatches)`);
@@ -370,7 +373,7 @@ try {
   assert(weak.recapReached, "weak run: story reached the recap screen");
   assert(weak.outcomeMismatch === 0, `weak run: independent oracle matched (LISTEN ${weak.listenOracles} / RESULT ${weak.resultOracles}, ${weak.outcomeMismatch} mismatches)`);
   assert(weak.stageHints.length === 0, `weak run: no target/example hint leaked on Stage (${JSON.stringify(weak.stageHints.slice(0,3))})`);
-  assert(weak.noPrimary === 0, `weak run: every step had an enabled primary control (missing ${weak.noPrimary} times)`);
+  assert(weak.noPrimary === 0, `weak run: every step had an enabled main-view control (missing ${weak.noPrimary} times)`);
   assert(weak.badDisabled.length === 0, `weak run: no disabled control lacks a reason (${JSON.stringify(weak.badDisabled.slice(0,3))})`);
   assert(weak.stuck === null, `weak run: did not stall (${JSON.stringify(weak.stuck)})`);
   assert(c.exceptions.length === 0, `weak run: no console exceptions (got ${c.exceptions.length})`);
