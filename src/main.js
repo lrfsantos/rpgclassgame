@@ -87,6 +87,7 @@ function bootStage() {
           stalePolls = 0;
           lastSource = "self-heal";
           state.ingest(s);
+          lastApplied = JSON.stringify(s);
           ack();
         }
       } else {
@@ -170,18 +171,23 @@ function bootStage() {
   });
 }
 
+let lastApplied = "";
 function applyIfNewer(s) {
   const cur = state.getState();
   if (!cur || cur.rev === undefined || s.rev === undefined) return false;
+  const sig = JSON.stringify(s);
+  // the poll reads the same save every 500ms; re-ingesting it would restart the
+  // typewriter forever. Only skip when we already applied this exact state.
+  if (sig === lastApplied) return false;
   // different session = the GM restarted fresh (storage cleared); accept it and
   // drop the old rev baseline so the Stage stops ignoring a lower-rev state (D15)
   if (cur.session && s.session && cur.session !== s.session) {
-    if (s && s.schema === 2) state.ingest(s);
+    if (s && s.schema === 2) { state.ingest(s); lastApplied = sig; }
     return true;
   }
   if (s.rev >= cur.rev) {
     // Keep schema guard: stage only ingests states it understands.
-    if (s && s.schema === 2) state.ingest(s);
+    if (s && s.schema === 2) { state.ingest(s); lastApplied = sig; }
     return true;
   }
   return false;

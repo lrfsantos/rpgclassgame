@@ -224,4 +224,4 @@ try {
 } finally {
   if (edge) edge.kill();
 }
-process.exitCode = failures ? 1 : 0;
+process.exit(failures ? 1 : 0);

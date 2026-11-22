@@ -172,6 +172,20 @@ try {
   const revAfterNew = await gm.eval(`(async()=>{const st=await import("${BASE}/src/engine/state.js"); return st.getState().rev;})()`);
   assert(revAfterNew >= revBeforeNew, `New Game after GM reload keeps rev monotonic (${revBeforeNew} -> ${revAfterNew})`);
 
+  // ---- popup Stage must not re-render on every 500ms poll of the same save:
+  // the typewriter node must stay mounted while the GM is idle. ----
+  await waitFor(gm, `!!document.querySelector('[data-action="quick-add-4"]')`, 6000);
+  await waitFor(stage, `!!document.querySelector('#stage .title-screen')`, 6000);
+  await gm.eval(`document.querySelector('[data-action="quick-add-4"]').click(); true`);
+  await wait(300);
+  await gm.eval(`(()=>{const b=document.querySelector('[data-action="start-episode"][data-value="the-bell-of-bellingham"]'); if(b)b.click(); return true;})()`);
+  await waitFor(stage, `!!document.querySelector('#stage .typewriter')`, 8000);
+  await wait(400);
+  await stage.eval(`(()=>{const n=document.querySelector('#stage .typewriter'); if(n)n.__mark=true; return true;})()`);
+  await wait(2500);
+  const tw = await stage.eval(`(()=>{const n=document.querySelector('#stage .typewriter'); return {same:!!(n&&n.__mark), text:(n?n.textContent:'').slice(0,40)};})()`);
+  assert(tw.same, `Stage typewriter stays mounted while GM is idle (same=${tw.same}, text="${tw.text}")`);
+
   console.log(failures ? "\nSYNC-PILL TEST FAILED" : "\nSYNC-PILL TEST PASSED");
 } catch (e) {
   console.error("CRASH:", e);
@@ -180,4 +194,4 @@ try {
 } finally {
   if (edge) edge.kill();
 }
-process.exitCode = failures ? 1 : 0;
+process.exit(failures ? 1 : 0);

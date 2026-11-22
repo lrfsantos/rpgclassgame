@@ -1,12 +1,12 @@
 // F1 SPRITES test: verifies that every hero and monster slot on the Stage has
 // its OWN non-transparent canvas inside the viewport, for duplicate-class
 // parties (the exact scenario that broke with the old getSpriteFrames
-// element-cache: heroes of the same class stole each other's canvas — observed
+// element-cache: heroes of the same class stole each other's canvas â€” observed
 // party [warrior,warrior,warrior,mage,cleric] -> slots NONE,NONE,ok,ok,ok).
 //
 // Cover: parties of 5 (warrior,warrior,warrior,mage,cleric), 12 of ONE class,
 // and 12 mixed; expedition (combat party row = the failing case) and story (the
-// visible actor sprite, a regression guard — the full story party row arrives
+// visible actor sprite, a regression guard â€” the full story party row arrives
 // with F3). Stage popup (stage.html) and index.html single-window; sampled at
 // every observed step, after 30 actions and after a reload. Every hero +
 // monster slot must show a non-transparent canvas within the viewport.
@@ -253,4 +253,4 @@ try {
 } finally {
   if (edge) edge.kill();
 }
-process.exitCode = failures ? 1 : 0;
+process.exit(failures ? 1 : 0);

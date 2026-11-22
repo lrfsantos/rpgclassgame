@@ -1,4 +1,4 @@
-﻿// Permanent stress test: many random full runs under node with stubbed browser globals.
+// Permanent stress test: many random full runs under node with stubbed browser globals.
 import { loadContent, getContent } from "file:///C:/Users/luiza/Documents/protogame/src/engine/content.js";
 import * as stateMod from "file:///C:/Users/luiza/Documents/protogame/src/engine/state.js";
 import * as actions from "file:///C:/Users/luiza/Documents/protogame/src/engine/actions.js";
@@ -102,4 +102,4 @@ for (let r = 0; r < RUNS; r++) {
 }
 
 console.log(failures ? `\n${failures} FAILURES` : `\nALL ${RUNS} RUNS OK`);
-process.exitCode = failures ? 1 : 0;
+process.exit(failures ? 1 : 0);

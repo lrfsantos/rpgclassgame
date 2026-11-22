@@ -77,7 +77,7 @@ async function resetGame(c) {
 }
 
 async function playOnce(c, grade) {
-  // grade: "great"|"weak" — grades every SAY IT accordingly (1=Weak 3=Great)
+  // grade: "great"|"weak" â€” grades every SAY IT accordingly (1=Weak 3=Great)
   const stageHints = [];
   const storyItemsSeen = [];
   let recapReached = false;  let noPrimary = 0;
@@ -271,7 +271,7 @@ async function playOnce(c, grade) {
       pendingListenName = null;
     }
 
-    // G: hide, never disable. CHOOSE/SAY IT have no primary by design — their
+    // G: hide, never disable. CHOOSE/SAY IT have no primary by design â€” their
     // enabled control is an approach card or a grade button. Every step must
     // have SOME enabled main-view control.
     const primEnabled = await evalJs(c.send, `!!document.querySelector('.primary-step:not([disabled])')`);
@@ -388,4 +388,4 @@ try {
 } finally {
   if (edge) edge.kill();
 }
-process.exitCode = failures ? 1 : 0;
+process.exit(failures ? 1 : 0);

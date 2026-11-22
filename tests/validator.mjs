@@ -80,4 +80,4 @@ assert(!!warned, `unread granted flag warns (got ${warned ? "a warning" : "no wa
 rmSync(`${FIX}/episodes.json`, { force: true });
 
 console.log(failures ? `\n${failures} FAILURES` : "\nALL VALIDATOR TESTS PASSED");
-process.exitCode = failures ? 1 : 0;
+process.exit(failures ? 1 : 0);

@@ -409,4 +409,4 @@ try {
 
 if (!phase2Done) console.error("NOT TESTED: two-window layout (BroadcastChannel) could not be driven headlessly in this environment.");
 console.log(failures ? `\n${failures} FAILURES` : "\nALL FULL-RUN TESTS PASSED");
-process.exitCode = failures ? 1 : 0;
+process.exit(failures ? 1 : 0);
