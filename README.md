@@ -20,18 +20,9 @@ BroadcastChannel need a local server. Use one of these:
 
 ### Option A — start.bat (Windows, recommended)
 Double-click `start.bat` in the project root. It opens `http://localhost:8000`
-in your default browser and starts a local server, trying (in order):
-1. `node server.js` (bundled, no installs — preferred),
-2. `py -m http.server 8000`,
-3. `python -m http.server 8000`.
-
-If it can't find Node.js or Python, `start.bat` prints a clear message telling
-you to use the VS Code Live Server extension or GitHub Pages (below).
-
-> Note: on Windows the Microsoft Store Python "alias" (the `python.exe` in
-> `...\WindowsApps`) does not actually run `http.server`. `start.bat` avoids
-> it by preferring Node.js. If you prefer Python, install it from python.org
-> (check "Add to PATH") — but it's not required.
+in your default browser and starts a local server with `node server.js`.
+The only requirement is Node.js (https://nodejs.org) — no admin rights and no
+other runtimes. If Node.js is missing, `start.bat` prints a clear message.
 
 ### Option B — VS Code "Live Server" extension
 Install the **Live Server** extension, right-click `index.html` and choose
