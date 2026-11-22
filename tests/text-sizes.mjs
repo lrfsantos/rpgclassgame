@@ -102,7 +102,15 @@ try {
   await gm.eval(`(()=>{const b=document.getElementById('gm-drawer-open'); if(b)b.click(); return true;})()`);
   await addPlayers(gm, 4);
   await gm.eval(`document.querySelector('[data-action="start-expedition"]').click()`);
-  await waitFor(gm, `!!document.querySelector('#stage .battle-menu') || !!document.querySelector('#stage .step-bar')`, 8000);
+  await waitFor(gm, `!!document.querySelector('#stage .step-bar')`, 8000);
+  // rooms are random: advance until a combat room is actually on screen
+  for (let i = 0; i < 15; i++) {
+    const status = await gm.eval(`(async()=>{const st=await import("${BASE}/src/engine/state.js"); const e=st.getState().expedition; return e?e.roomStatus:null;})()`);
+    if (status === 'combat') break;
+    await gm.eval(`(()=>{const b=document.querySelector('[data-action="advance-room"]:not([disabled])')||document.querySelector('[data-action="skip-room"]'); if(b){b.click();return true;} return false;})()`);
+    await wait(150);
+  }
+  await waitFor(gm, `!!document.querySelector('#stage .battle-party .party-slot .pname-tag')`, 8000);
   const combatSizes = JSON.parse(await gm.eval(MEASURE([
     ".battle-menu", ".battle-menu .cmd", ".battle-menu .cmd-label",
     ".battle-menu .prompt", ".map-title", ".map-node",
