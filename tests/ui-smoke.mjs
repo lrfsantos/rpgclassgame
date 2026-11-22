@@ -168,6 +168,23 @@ try {
   const stageCtxCount = await evaluate(sc.send, `window.__ctxCount`);
   assert(stageCtxCount === 0, `Stage window creates no AudioContext on gesture (got ${stageCtxCount})`);
 
+  // Delete save must remove the key for good, not write a fresh lobby save.
+  await evaluate(send, `(()=>{const b=document.querySelector('[data-action="delete-save"]'); if(b)b.click(); return true;})()`);
+  await wait(200);
+  const saveAfterDelete = await evaluate(send, `localStorage.getItem('classroom-rpg-save-v1')`);
+  assert(saveAfterDelete === null, `Delete save removes the save key (got "${String(saveAfterDelete).slice(0, 40)}")`);
+  await evaluate(send, `location.reload(); true`);
+  await wait(1000);
+  const noContinue = await evaluate(send, `!document.querySelector('#start-overlay.show') && !!document.querySelector('#stage .title-screen')`);
+  assert(noContinue, "no Continue overlay after Delete save + reload");
+
+  // A structurally invalid schema-2 save must be ignored, not crash the page.
+  await evaluate(send, `localStorage.setItem('classroom-rpg-save-v1', JSON.stringify({schema:2,rev:9,phase:'expedition',expedition:null,players:[],party:{score:0,gold:0},settings:{}})); true`);
+  await evaluate(send, `location.reload(); true`);
+  await wait(1200);
+  const recover = await evaluate(send, `({title:!!document.querySelector('#stage .title-screen'), banner:!!document.getElementById('err-banner')})`);
+  assert(recover.title && !recover.banner, `invalid save ignored, Stage renders lobby without error banner (got ${JSON.stringify(recover)})`);
+
   console.log(failures ? "\nSMOKE TEST FAILED" : "\nSMOKE TEST PASSED");
 } catch (e) {
   console.error("CRASH:", e);

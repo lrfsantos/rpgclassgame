@@ -263,6 +263,8 @@ function openStageWindow() {
 export { openStageWindow };
 
 function chooseStart() {
+  // seed monotonicRev from the save before any New Game reset
+  state.init();
   return new Promise((resolve) => {
     if (!state.hasSave()) {
       state.init();

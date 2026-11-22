@@ -238,6 +238,7 @@ export function getView(state) {
     stepIndex: STEP_INDEX[step] ?? 0,
     title: (room && room.name) || ev.title || "",
     goal: exp ? exp.goal || "" : "",
+    narration: exp && exp.log ? ((exp.log.find((e) => e && e.kind === "narrate") || {}).text || "") : "",
     chapters: exp && exp.rooms ? exp.rooms.map((r, i) => ({ id: r.id, name: r.name, done: i < sceneIndex, current: i === sceneIndex })) : [],
     read,
     ask,

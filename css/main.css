@@ -357,6 +357,7 @@ body, button, input, select, textarea, .window, .muted, .log-entry { font-family
 .story-title { font-family: var(--font-body); font-weight: 700; color: var(--gold); font-size: calc(32px * var(--ss)); }
 .story-path { font-family: var(--font-body); color: var(--bone-dim); font-size: calc(28px * var(--ss)); }
 .story-goal { font-family: var(--font-body); color: var(--bone-dim); font-size: calc(28px * var(--ss)); }
+.stage-narration { font-family: var(--font-body); color: var(--gold); background: var(--panel); border: 2px solid var(--gold); padding: calc(8px * var(--ss)) calc(12px * var(--ss)); font-size: calc(28px * var(--ss)); max-height: 16vh; overflow: hidden; overflow-wrap: anywhere; }
 .story-scene {
   flex: 1; position: relative; display: flex; align-items: center; justify-content: center; gap: calc(24px * var(--ss));
   background: linear-gradient(#241f19, #1b1713);

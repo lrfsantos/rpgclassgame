@@ -356,7 +356,7 @@ try {
     assert(await gmX.eval(`(()=>{const b=window.__lastBc; return !!(b&&b.state&&!('history' in b.state));})()`), label + ": broadcast payload has no history");
     assert(await gmX.eval(`(()=>{const raw=localStorage.getItem('classroom-rpg-save-v1'); if(!raw)return true; const p=JSON.parse(raw); return !('history' in p);})()`), label + ": saved JSON has no history");
 
-    // ---- rev survives reset / delete-save; Stage must follow (rev guard) ----
+    // ---- rev survives reset; delete-save removes the key; Stage must follow ----
     const revBefore = await gmX.eval(`JSON.parse(localStorage.getItem('classroom-rpg-save-v1')).rev`);
     assert(revBefore >= 20, label + ": advanced GM past rev 20 before reset (got rev " + revBefore + ")");
     await gmX.eval(`(()=>{const b=document.getElementById('start-new'); if(b)b.click(); return true;})()`);
@@ -367,8 +367,8 @@ try {
     assert(stageTitle, label + ": Stage followed New Game reset (shows lobby/title, not stale recap)");
     await gmX.eval(`(()=>{const b=document.querySelector('[data-action="delete-save"]'); if(b)b.click(); return true;})()`);
     await wait(300);
-    const revAfterDel = await gmX.eval(`JSON.parse(localStorage.getItem('classroom-rpg-save-v1')).rev`);
-    assert(revAfterDel >= revAfterNew, label + ": Delete save keeps rev monotonic (before " + revAfterNew + " after " + revAfterDel + ")");
+    const saveAfterDel = await gmX.eval(`localStorage.getItem('classroom-rpg-save-v1')`);
+    assert(saveAfterDel === null, label + ": Delete save removes the save key");
     const stageStillLive = await waitFor(stageX, `!!document.querySelector('#stage .title-screen') || /No players yet/.test(document.body.textContent)`, 4000);
     assert(stageStillLive, label + ": Stage still live after Delete save");
 

@@ -130,7 +130,9 @@ export function load() {
     const raw = localStorage.getItem(SAVE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (parsed && parsed.schema === SCHEMA && parsed.phase) return parsed;
+      if (parsed && parsed.schema === SCHEMA && parsed.phase &&
+          Array.isArray(parsed.players) && parsed.party && parsed.settings &&
+          (parsed.phase === "lobby" || (parsed.expedition && Array.isArray(parsed.expedition.rooms)))) return parsed;
     }
   } catch (e) {
     console.warn("load failed", e);

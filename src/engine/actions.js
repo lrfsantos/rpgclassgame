@@ -1089,9 +1089,9 @@ export function adjustScore(delta) {
 
 // Teacher tool: send a free-text narration line to the Stage.
 export function narrate(text) {
+  const t = (text || "").trim();
+  if (!t) return false; // no-op: don't burn a rev or an undo slot
   return mutate((s) => {
-    const t = (text || "").trim();
-    if (!t) return s;
     log(s, t, "narrate");
     return s;
   });
@@ -1109,10 +1109,12 @@ export function backToLobby() {
 
 export function deleteSave() {
   localStorage.removeItem("classroom-rpg-save-v1");
-  return mutate((s) => {
+  const result = mutate((s) => {
     Object.assign(s, newGameState());
     return s;
   });
+  localStorage.removeItem("classroom-rpg-save-v1");
+  return result;
 }
 
 export { undo }; // passthrough to the state layer for the GM tools

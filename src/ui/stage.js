@@ -119,8 +119,9 @@ function renderTitle(s) {
 
 // ---------- Play ----------
 function renderPlay(v, s) {
-  if (v.isStory) return renderStory(v, s);
-  return renderCombat(v, s);
+  const wrap = v.isStory ? renderStory(v, s) : renderCombat(v, s);
+  if (v.narration) wrap.appendChild(el("div", { class: "stage-narration" }, v.narration));
+  return wrap;
 }
 
 // ---------- Story layout (episode story scenes) ----------

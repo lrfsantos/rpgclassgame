@@ -172,6 +172,13 @@ try {
   const narrCheck = JSON.parse(await evalJs(c.send, `(()=>{const i=document.getElementById('gm-narrate'); const s=JSON.parse(localStorage.getItem('classroom-rpg-save-v1')||'{}'); const log=(s.expedition&&s.expedition.log)||[]; const n=log.filter(x=>JSON.stringify(x).includes(${JSON.stringify(narrText)})).length; return JSON.stringify({value:i?i.value:null,count:n});})()`));
   assert(narrCheck.value === "", `Narrate input is empty after Send (got "${narrCheck.value}")`);
   assert(narrCheck.count === 1, `Narration logged exactly once (got ${narrCheck.count})`);
+  const stageNarr = await evalJs(c.send, `(()=>{const e=document.querySelector('#stage .stage-narration'); return e?e.textContent:'';})()`);
+  assert(stageNarr.includes(narrText), `Stage displays Narrate text (got "${stageNarr.slice(0, 50)}")`);
+  const revBeforeBlank = await evalJs(c.send, `(JSON.parse(localStorage.getItem('classroom-rpg-save-v1'))||{}).rev`);
+  await evalJs(c.send, `(()=>{const t=document.getElementById('gm-narrate'); t.value='   '; const b=document.querySelector('.tools [data-action="narrate"]'); if(b)b.click(); return true;})()`);
+  await wait(200);
+  const revAfterBlank = await evalJs(c.send, `(JSON.parse(localStorage.getItem('classroom-rpg-save-v1'))||{}).rev`);
+  assert(revBeforeBlank === revAfterBlank, `Whitespace Narrate is a no-op (rev ${revBeforeBlank} -> ${revAfterBlank})`);
   // re-enable tips so the rest of the story drive is unaffected; keep More closed
   await evalJs(c.send, `(()=>{const t=document.querySelector('[data-setting="tutorialTips"]'); if(t){t.checked=true; t.dispatchEvent(new Event('change',{bubbles:true}));} document.querySelector('.tools').open=false; return true;})()`);
   await wait(200);

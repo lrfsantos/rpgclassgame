@@ -162,6 +162,16 @@ try {
   assert(stageRevKept === gmRevNew, `Stage keeps the broadcast rev after failed save (stage ${stageRevKept}, gm ${gmRevNew}, stored ${saveRevNew})`);
   assert(cS.exceptions.length === 0, `AUDIT11: no stage console exceptions (${cS.exceptions.length})`);
 
+  // ---- New Game after a GM reload must keep rev monotonic (monotonicRev is
+  // seeded from the save by chooseStart before reset). ----
+  const revBeforeNew = await gm.eval(`(()=>{const p=JSON.parse(localStorage.getItem(${JSON.stringify(SAVE_KEY)})); return p?p.rev:0;})()`);
+  await c.send("Page.reload", { ignoreCache: true });
+  await waitFor(gm, `document.querySelector('#start-overlay') && document.querySelector('#start-overlay').classList.contains('show')`, 12000);
+  await gm.eval(`document.getElementById('start-new').click()`);
+  await wait(300);
+  const revAfterNew = await gm.eval(`(async()=>{const st=await import("${BASE}/src/engine/state.js"); return st.getState().rev;})()`);
+  assert(revAfterNew >= revBeforeNew, `New Game after GM reload keeps rev monotonic (${revBeforeNew} -> ${revAfterNew})`);
+
   console.log(failures ? "\nSYNC-PILL TEST FAILED" : "\nSYNC-PILL TEST PASSED");
 } catch (e) {
   console.error("CRASH:", e);

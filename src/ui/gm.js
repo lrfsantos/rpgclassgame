@@ -334,7 +334,7 @@ function renderMore(s) {
 
   const inPlay = s.phase !== "lobby" && s.phase !== "victory" && s.phase !== "defeated";
   if (inPlay) {
-    const exp = s.expedition;
+    const exp = s.expedition || {};
     const view = getView(s);
     inner.appendChild(el("div", { class: "more-label" }, "Tools"));
     const trow = el("div", { class: "row" });
