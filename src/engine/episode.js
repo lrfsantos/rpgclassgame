@@ -49,6 +49,7 @@ export function buildEpisodeExpedition(episode) {
     deckName: episode.name,
     episodeId: episode.id,
     episodeName: episode.name,
+    goal: episode.goal || "",
     mode: "episode",
     rooms,
     current: 0,

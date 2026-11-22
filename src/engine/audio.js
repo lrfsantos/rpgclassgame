@@ -83,7 +83,12 @@ export function setMuted(m) {
 export function isMuted() { return muted; }
 
 // Resume audio context on first user gesture (browsers require it).
+let inited = false;
 export function initAudio() {
-  window.addEventListener("pointerdown", () => ensureCtx(), { once: false });
-  window.addEventListener("keydown", () => ensureCtx(), { once: false });
+  if (inited) return;
+  inited = true;
+  // browsers only allow audio after a gesture: resume the context and start the loop
+  const gesture = () => { if (!muted) startMusic(); };
+  window.addEventListener("pointerdown", gesture);
+  window.addEventListener("keydown", gesture);
 }

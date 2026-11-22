@@ -135,6 +135,20 @@ try {
   await evaluate(send, `(()=>{const i=document.getElementById('gm-name'); i.focus(); i.dispatchEvent(new KeyboardEvent('keydown', { key: 'g', bubbles: true })); return document.activeElement === i;})()`);
   await wait(300);
   assert(await drawerOpen() === true, "D13: G while typing in an input does not toggle the drawer");
+
+  // version badge must match the engine VERSION constant
+  const badge = await evaluate(send, `(()=>{const b=document.querySelector('.ver-badge'); return b?b.textContent.trim():null;})()`);
+  assert(badge === "v2.2.0", `version badge matches VERSION (got "${badge}")`);
+
+  // mute toggle in More must actually change the audio module's state
+  await evaluate(send, `(()=>{const d=document.querySelector('.tools'); if(d) d.open=true; return !!d;})()`);
+  const mutedBefore = await evaluate(send, `(async()=>{const a=await import("http://localhost:8000/src/engine/audio.js"); return a.isMuted();})()`);
+  const muteLabel = await evaluate(send, `(()=>{const b=document.querySelector('[data-action="toggle-mute"]'); if(b){b.click();return b.textContent.trim();} return null;})()`);
+  await wait(250);
+  const mutedAfter = await evaluate(send, `(async()=>{const a=await import("http://localhost:8000/src/engine/audio.js"); return a.isMuted();})()`);
+  assert(!!muteLabel, "mute toggle button exists in More");
+  assert(mutedAfter === !mutedBefore, `mute toggle flips audio state (${mutedBefore} -> ${mutedAfter}, label "${muteLabel}")`);
+  await evaluate(send, `(()=>{const b=document.querySelector('[data-action="toggle-mute"]'); if(b)b.click(); return true;})()`);
   // close the drawer again for a clean exit state
   await evaluate(send, `document.getElementById('gm-drawer-close').click()`);
   await wait(300);

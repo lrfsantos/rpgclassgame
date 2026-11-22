@@ -7,11 +7,13 @@ import * as state from "./engine/state.js";
 import { mountStage } from "./ui/stage.js";
 import { mountGm } from "./ui/gm.js";
 import { openGmChannel, openStageChannel } from "./sync/broadcast.js";
+import * as audio from "./engine/audio.js";
 
 export const VERSION = "v2.2.0";
 const page = window.location.pathname.split("/").pop() || "index.html";
 
 async function boot() {
+  audio.initAudio();
   try {
     await loadContent();
   } catch (e) {

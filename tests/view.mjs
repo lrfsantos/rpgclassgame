@@ -35,6 +35,7 @@ s.players.forEach((p, i) => actions.setPlayerClass(p.id, classes[i % classes.len
 actions.startEpisode(ep.id);
 s = stateMod.getState();
 assert(s.expedition.mode === "episode", "episode mode set");
+assert(getView(s).goal === ep.goal, `episode goal reaches the view (got "${getView(s).goal}")`);
 
 let stepsSeen = {};
 let scenes = 0;

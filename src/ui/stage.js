@@ -130,7 +130,8 @@ function renderStory(v, s) {
   wrap.appendChild(stepBar(v));
 
   const top = el("div", { class: "story-top" });
-  top.appendChild(el("span", { class: "story-title" }, v.title || v.goal || "Story"));
+  top.appendChild(el("span", { class: "story-title" }, v.title || "Story"));
+  if (v.goal) top.appendChild(el("span", { class: "story-goal" }, v.goal));
   top.appendChild(el("span", { class: "story-path" }, `Scene ${v.sceneIndex + 1}/${v.sceneCount}`));
   // persistent Spark meter + items strip (F3)
   const spark = el("span", { class: "spark-count", "data-spark": String(v.spark) }, `Spark ${v.spark}`);

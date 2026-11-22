@@ -72,6 +72,8 @@ async function resetGame(c) {
   await wait(400);
   await click(c.send, '[data-action="start-episode"][data-value="the-bell-of-bellingham"]');
   await wait(700);
+  const goalText = await evalJs(c.send, `(()=>{const e=document.querySelector('#stage .story-goal'); return e?e.textContent.trim():'';})()`);
+  assert(goalText.includes('recover the clapper'), `Stage shows the episode goal (got "${goalText}")`);
 }
 
 async function playOnce(c, grade) {

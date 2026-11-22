@@ -7,6 +7,7 @@ import { getContent } from "../engine/content.js";
 import * as actions from "../engine/actions.js";
 import { getView, currentStep } from "../engine/view.js";
 import { el, bar } from "./util.js";
+import * as audio from "../engine/audio.js";
 
 const STEPS = ["listen", "choose", "sayit", "roll", "result"];
 const STEP_LABEL = { listen: "LISTEN", choose: "CHOOSE", sayit: "SAY IT", roll: "ROLL", result: "RESULT" };
@@ -198,6 +199,11 @@ export function mountGm(container) {
       case "delete-save":
         actions.deleteSave();
         break;
+      case "toggle-mute": {
+        audio.setMuted(!audio.isMuted());
+        render();
+        break;
+      }
       case "text-plus":
         textPct = Math.min(140, textPct + 10);
         localStorage.setItem(TEXT_SIZE_KEY, String(textPct));
@@ -318,6 +324,7 @@ function renderMore(s) {
   const tt = el("input", { type: "checkbox", "data-setting": "tutorialTips" });
   tt.checked = s.settings.tutorialTips !== false;
   row2.appendChild(tt);
+   row2.appendChild(el("button", { "data-action": "toggle-mute", class: "btn" }, audio.isMuted() ? "Sound: off" : "Sound: on"));
   inner.appendChild(row2);
   const ts = el("div", { class: "row" });
   ts.appendChild(el("span", { class: "label" }, "Text size"));
