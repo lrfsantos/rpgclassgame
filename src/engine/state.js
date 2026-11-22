@@ -136,7 +136,10 @@ export function load() {
       const okSettings = p && p.settings && typeof p.settings === "object" && !Array.isArray(p.settings);
       const okPhase = p && ["lobby", "expedition", "victory", "defeated"].includes(p.phase);
       const okExp = okPhase && (p.phase === "lobby" ||
-        (exp && typeof exp === "object" && Array.isArray(exp.rooms) && typeof exp.current === "number" && Array.isArray(exp.log)));
+        (exp && typeof exp === "object" && Array.isArray(exp.rooms) &&
+         exp.rooms.every((r) => r && typeof r === "object" && !Array.isArray(r)) &&
+         Number.isInteger(exp.current) && exp.current >= 0 && exp.current < exp.rooms.length &&
+         Array.isArray(exp.log)));
       if (p && p.schema === SCHEMA && okPlayers && okParty && okSettings && okPhase && okExp) return p;
     }
   } catch (e) {

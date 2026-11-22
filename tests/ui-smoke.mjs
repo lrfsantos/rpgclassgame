@@ -186,6 +186,8 @@ try {
     { schema:2, rev:9, phase:'bogus', players:[], party:{score:0,gold:0}, settings:{} },
     { schema:2, rev:9, phase:'expedition', expedition:{rooms:[],current:0,log:[]}, players:[], party:5, settings:{} },
     { schema:2, rev:9, phase:'expedition', expedition:{rooms:{},current:0,log:[]}, players:[], party:{}, settings:{} },
+    { schema:2, rev:9, phase:'expedition', expedition:{rooms:[null],current:0,log:[]}, players:[], party:{}, settings:{} },
+    { schema:2, rev:9, phase:'expedition', expedition:{rooms:[{id:'r'}],current:5,log:[]}, players:[], party:{}, settings:{} },
   ];
   for (let i = 0; i < badSaves.length; i++) {
     await evaluate(send, `localStorage.setItem('classroom-rpg-save-v1', ${JSON.stringify(JSON.stringify(badSaves[i]))}); true`);
