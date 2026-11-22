@@ -178,12 +178,22 @@ try {
   const noContinue = await evaluate(send, `!document.querySelector('#start-overlay.show') && !!document.querySelector('#stage .title-screen')`);
   assert(noContinue, "no Continue overlay after Delete save + reload");
 
-  // A structurally invalid schema-2 save must be ignored, not crash the page.
-  await evaluate(send, `localStorage.setItem('classroom-rpg-save-v1', JSON.stringify({schema:2,rev:9,phase:'expedition',expedition:null,players:[],party:{score:0,gold:0},settings:{}})); true`);
-  await evaluate(send, `location.reload(); true`);
-  await wait(1200);
-  const recover = await evaluate(send, `({title:!!document.querySelector('#stage .title-screen'), banner:!!document.getElementById('err-banner')})`);
-  assert(recover.title && !recover.banner, `invalid save ignored, Stage renders lobby without error banner (got ${JSON.stringify(recover)})`);
+  // Structurally invalid schema-2 saves must be ignored, not crash the page.
+  const badSaves = [
+    { schema:2, rev:9, phase:'expedition', expedition:null, players:[], party:{score:0,gold:0}, settings:{} },
+    { schema:2, rev:9, phase:'expedition', expedition:{rooms:[],current:0,log:[]}, players:[null], party:{score:0,gold:0}, settings:{} },
+    { schema:2, rev:9, phase:'expedition', expedition:{rooms:[],current:0,log:{}}, players:[], party:{score:0,gold:0}, settings:{} },
+    { schema:2, rev:9, phase:'bogus', players:[], party:{score:0,gold:0}, settings:{} },
+    { schema:2, rev:9, phase:'expedition', expedition:{rooms:[],current:0,log:[]}, players:[], party:5, settings:{} },
+    { schema:2, rev:9, phase:'expedition', expedition:{rooms:{},current:0,log:[]}, players:[], party:{}, settings:{} },
+  ];
+  for (let i = 0; i < badSaves.length; i++) {
+    await evaluate(send, `localStorage.setItem('classroom-rpg-save-v1', ${JSON.stringify(JSON.stringify(badSaves[i]))}); true`);
+    await evaluate(send, `location.reload(); true`);
+    await wait(1000);
+    const recover = await evaluate(send, `({title:!!document.querySelector('#stage .title-screen'), banner:!!document.getElementById('err-banner')})`);
+    assert(recover.title && !recover.banner, `malformed save #${i} ignored, lobby renders without banner (got ${JSON.stringify(recover)})`);
+  }
 
   console.log(failures ? "\nSMOKE TEST FAILED" : "\nSMOKE TEST PASSED");
 } catch (e) {

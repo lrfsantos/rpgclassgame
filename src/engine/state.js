@@ -129,10 +129,15 @@ export function load() {
   try {
     const raw = localStorage.getItem(SAVE_KEY);
     if (raw) {
-      const parsed = JSON.parse(raw);
-      if (parsed && parsed.schema === SCHEMA && parsed.phase &&
-          Array.isArray(parsed.players) && parsed.party && parsed.settings &&
-          (parsed.phase === "lobby" || (parsed.expedition && Array.isArray(parsed.expedition.rooms)))) return parsed;
+      const p = JSON.parse(raw);
+      const exp = p && p.expedition;
+      const okPlayers = p && Array.isArray(p.players) && p.players.every((x) => x && typeof x === "object" && typeof x.id === "string");
+      const okParty = p && p.party && typeof p.party === "object" && !Array.isArray(p.party);
+      const okSettings = p && p.settings && typeof p.settings === "object" && !Array.isArray(p.settings);
+      const okPhase = p && ["lobby", "expedition", "victory", "defeated"].includes(p.phase);
+      const okExp = okPhase && (p.phase === "lobby" ||
+        (exp && typeof exp === "object" && Array.isArray(exp.rooms) && typeof exp.current === "number" && Array.isArray(exp.log)));
+      if (p && p.schema === SCHEMA && okPlayers && okParty && okSettings && okPhase && okExp) return p;
     }
   } catch (e) {
     console.warn("load failed", e);
