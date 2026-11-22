@@ -90,6 +90,9 @@ export function publishable() {
 }
 
 export function getSessionId() {
+  // after a GM reload the persisted session is the effective one; the in-memory
+  // variable is empty and would make the Stage's valid ack look foreign (S1)
+  if (state && state.session) return state.session;
   if (!sessionId) {
     sessionId = Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 6);
   }

@@ -45,14 +45,14 @@ function bootStage() {
     if (msg.state) {
       got = true;
       lastSource = "BC";
-      applyIfNewer(msg.state);
+      if (applyIfNewer(msg.state)) noteDirect(msg.state);
       ack();
     }
   });
   const stopWatch = state.watchStorage((s) => {
     if (s === null) { /* save cleared */ return; }
     lastSource = "storage";
-    applyIfNewer(s);
+    if (applyIfNewer(s)) noteDirect(s);
     ack();
   });
 
@@ -63,6 +63,11 @@ function bootStage() {
   // ahead, e.g. after the GM forced its rev up, and would otherwise ignore the
   // older GM state forever). The ack is written after every apply so the GM's
   // "behind" count reflects the rev the Stage actually holds.
+  // Direct transports carry the GM's newest state. A lower-rev localStorage
+  // value can be stale when save() failed, so self-heal only when the Stage is
+  // ahead of every rev it received directly.
+  let directRev = -1;
+  const noteDirect = (s) => { if (s && typeof s.rev === "number" && s.rev > directRev) directRev = s.rev; };
   let stalePolls = 0;
   const poll = () => {
     try {
@@ -73,7 +78,7 @@ function bootStage() {
       lastSource = "poll";
       const applied = applyIfNewer(s, true);
       if (applied) { stalePolls = 0; ack(); }
-      else if (s.session && state.getState().session === s.session && s.rev < state.getState().rev) {
+      else if (s.session && state.getState().session === s.session && s.rev < state.getState().rev && state.getState().rev > directRev) {
         if (++stalePolls >= 3) {
           stalePolls = 0;
           lastSource = "self-heal";
@@ -96,7 +101,7 @@ function bootStage() {
     const msg = ev.data || {};
     if (msg.type === "state" && msg.state) {
       lastSource = "opener";
-      applyIfNewer(msg.state);
+      if (applyIfNewer(msg.state)) noteDirect(msg.state);
       ack();
     }
   });
@@ -105,7 +110,7 @@ function bootStage() {
       try {
         if (window.opener && window.opener.__rpgPublishable) {
           const s = window.opener.__rpgPublishable();
-          if (s) { lastSource = "opener-poll"; applyIfNewer(s); ack(); }
+          if (s) { lastSource = "opener-poll"; if (applyIfNewer(s)) noteDirect(s); ack(); }
         }
       } catch (e) { /* cross-origin or gone */ }
     };

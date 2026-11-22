@@ -85,6 +85,18 @@ try {
   let pill = await getPill(gm);
   assert(!!pill && /Stage: in sync \(rev \d+\)/.test(pill), `fresh game + matching ack -> "Stage: in sync (rev N)" (got "${pill}")`);
 
+  // ---- AUDIT11 P2: reload ONLY the GM; the persisted session must be restored
+  // so the Stage's still-valid ack is recognized. ----
+  await c.send("Page.reload", { ignoreCache: true });
+  await waitFor(gm, `document.querySelector('#start-overlay') && document.querySelector('#start-overlay').classList.contains('show')`, 12000);
+  await gm.eval(`(()=>{const b=document.getElementById('start-continue'); if(b)b.click(); return true;})()`);
+  await waitFor(gm, `!!document.querySelector('#gm-sync-pill')`);
+  await wait(1500);
+  const pillReload = await getPill(gm);
+  assert(!!pillReload && /Stage: in sync \(rev \d+\)/.test(pillReload), `GM reload keeps a valid Stage ack recognized (got "${pillReload}")`);
+  await gm.eval(`(()=>{const b=document.getElementById('gm-drawer-open'); if(b)b.click(); return true;})()`);
+  await waitFor(gm, `!!document.querySelector('.gm [data-action="add-player"], .gm .primary-step')`);
+
   // ---- state 2: stage forced ahead (acks a HIGHER rev) -> behind ----
   await setAck(gm, session, rev + 5);
   await wait(1500);
@@ -114,7 +126,7 @@ try {
   const stageForcedRev = await stage.eval(`(async()=>{const st=await import("${BASE}/src/engine/state.js"); return st.getState().rev;})()`);
   // act on the GM (one real action bumps its rev)
   const before = await gm.eval(`(()=>{const p=JSON.parse(localStorage.getItem(${JSON.stringify(SAVE_KEY)})); return p.rev;})()`);
-  await gm.eval(`(()=>{const b=document.querySelector('.primary-step:not([disabled])'); if(b){b.click();return true;} const c=document.querySelector('[data-action="choose-approach"]'); if(c){c.click();return true;} return false;})()`);
+  await gm.eval(`(()=>{const b=document.querySelector('.primary-step:not([disabled])')||document.querySelector('[data-action="score-plus"]')||document.querySelector('[data-action="choose-approach"]'); if(b){b.click();return true;} return false;})()`);
   await wait(400);
   const gmRev = await gm.eval(`(()=>{const p=JSON.parse(localStorage.getItem(${JSON.stringify(SAVE_KEY)})); return p.rev;})()`);
   assert(gmRev > before, `GM advanced after the action (${before} -> ${gmRev})`);
@@ -127,6 +139,28 @@ try {
   }
   assert(matched, `S2: Stage self-healed from forced rev ${stageForcedRev} back to GM rev ${gmRev} within 3s`);
   assert(cS.exceptions.length === 0, `S2: no stage console exceptions (${cS.exceptions.length})`);
+
+  // ---- AUDIT11 P2: GM localStorage writes fail -> save key stays stale, but a
+  // valid BroadcastChannel update must NOT be undone by Stage self-healing. ----
+  const gmRevBefore = await gm.eval(`(async()=>{const st=await import("${BASE}/src/engine/state.js"); return st.getState().rev;})()`);
+  const saveRevBefore = await gm.eval(`(()=>{const p=JSON.parse(localStorage.getItem(${JSON.stringify(SAVE_KEY)})); return p?p.rev:0;})()`);
+  await gm.eval(`(()=>{const key=${JSON.stringify(SAVE_KEY)}; const orig=localStorage.setItem.bind(localStorage); localStorage.setItem=(k,v)=>{if(k===key) throw new Error('audit11 save failure'); return orig(k,v);}; return true;})()`);
+  await gm.eval(`(()=>{const b=document.querySelector('.primary-step:not([disabled])')||document.querySelector('[data-action="score-plus"]'); if(b){b.click();return true;} return false;})()`);
+  await wait(500);
+  const gmRevNew = await gm.eval(`(async()=>{const st=await import("${BASE}/src/engine/state.js"); return st.getState().rev;})()`);
+  const saveRevNew = await gm.eval(`(()=>{const p=JSON.parse(localStorage.getItem(${JSON.stringify(SAVE_KEY)})); return p?p.rev:0;})()`);
+  assert(gmRevNew > gmRevBefore, `GM advanced with save writes failing (${gmRevBefore} -> ${gmRevNew})`);
+  assert(saveRevNew < gmRevNew, `stored rev stays stale (${saveRevNew} < ${gmRevNew})`);
+  // Deliver the update through the real GM->Stage postMessage handler (BC is not
+  // reliable between independent CDP-created tabs in headless Edge).
+  await stage.eval(`(async()=>{const st=await import("${BASE}/src/engine/state.js"); const s=st.publishable(); s.rev=${gmRevNew}; window.dispatchEvent(new MessageEvent('message',{origin:location.origin,data:{type:'state',state:s}})); return true;})()`);
+  await wait(200);
+  const stageRevFast = await stage.eval(`(async()=>{const st=await import("${BASE}/src/engine/state.js"); return st.getState().rev;})()`);
+  assert(stageRevFast === gmRevNew, `Stage applied the direct update (${stageRevFast})`);
+  await wait(2200);
+  const stageRevKept = await stage.eval(`(async()=>{const st=await import("${BASE}/src/engine/state.js"); return st.getState().rev;})()`);
+  assert(stageRevKept === gmRevNew, `Stage keeps the broadcast rev after failed save (stage ${stageRevKept}, gm ${gmRevNew}, stored ${saveRevNew})`);
+  assert(cS.exceptions.length === 0, `AUDIT11: no stage console exceptions (${cS.exceptions.length})`);
 
   console.log(failures ? "\nSYNC-PILL TEST FAILED" : "\nSYNC-PILL TEST PASSED");
 } catch (e) {

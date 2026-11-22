@@ -114,6 +114,7 @@ try {
 
   // ---- assertions ----
   // approach-card label >= 36px
+  assert(await gm.eval(`!!document.querySelector('.story .approach-stat')`), "approach-card stat element present");
   assert((storySizes[".story .approach-label"] || 0) >= 36, `approach-card label >= 36px (${storySizes[".story .approach-label"]})`);
   // dialogue == 44px (>= 40 acceptable)
   assert((storySizes[".story .story-dialogue"] || 0) >= 40, `story dialogue >= 40px (${storySizes[".story .story-dialogue"]})`);

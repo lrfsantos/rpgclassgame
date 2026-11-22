@@ -180,7 +180,9 @@ export function mountGm(container) {
       case "narrate": {
         const ni = root.querySelector("#gm-narrate");
         actions.narrate(ni ? ni.value : "");
-        if (ni) ni.value = "";
+        // narrate() renders synchronously: clear the NEW input, not the detached one
+        const fresh = root.querySelector("#gm-narrate");
+        if (fresh) fresh.value = "";
         break;
       }
       case "advance-room":
