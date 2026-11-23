@@ -29,7 +29,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 async function startEdge() {
   try { rmSync(PROFILE, { recursive: true, force: true }); } catch (e) {}
   for (let attempt = 0; attempt < 4; attempt++) {
-    edge = spawn(EDGE, ["--headless=new", "--disable-gpu", "--no-sandbox", `--remote-debugging-port=${PORT}`, `--user-data-dir=${PROFILE}`, "about:blank"], { stdio: "ignore" });
+    edge = spawn(EDGE, ["--mute-audio", "--headless=new", "--disable-gpu", "--no-sandbox", `--remote-debugging-port=${PORT}`, `--user-data-dir=${PROFILE}`, "about:blank"], { stdio: "ignore" });
     for (let i = 0; i < 30; i++) {
       await wait(300);
       try { const r = await fetch(`${HTTP}/json`); const l = await r.json(); if (l.some((t) => t.type === "page")) return; } catch (e) {}

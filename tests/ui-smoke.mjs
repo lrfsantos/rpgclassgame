@@ -66,7 +66,7 @@ async function evaluate(send, expression) {
 
 try {
   edge = spawn(EDGE, [
-    "--headless=new", "--disable-gpu", "--no-sandbox",
+    "--mute-audio", "--headless=new", "--disable-gpu", "--no-sandbox",
     `--remote-debugging-port=${CDP_PORT}`,
     `--user-data-dir=${PROFILE}`,
     "about:blank",
